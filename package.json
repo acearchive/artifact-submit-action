@@ -1,0 +1,45 @@
+{
+  "name": "artifact-submit-action",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A GitHub Action for submitting artifacts to Ace Archive",
+  "homepage": "https://github.com/acearchive/artifact-submit-action#readme",
+  "bugs": {
+    "url": "https://github.com/acearchive/artifact-submit-action/issues"
+  },
+  "main": "lib/main.js",
+  "scripts": {
+    "build": "tsc",
+    "format": "prettier --write '**/*.ts'",
+    "format-check": "prettier --check '**/*.ts'",
+    "lint": "eslint src/**/*.ts",
+    "package": "ncc build --source-map --license licenses.txt",
+    "test": "jest",
+    "all": "npm run build && npm run format && npm run lint && npm run package && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acearchive/artifact-submit-action"
+  },
+  "author": {
+    "name": "Frawley",
+    "url": "https://github.com/frawleyskid"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^18.7.23",
+    "@typescript-eslint/parser": "^5.38.1",
+    "@vercel/ncc": "^0.34.0",
+    "eslint": "^8.24.0",
+    "eslint-plugin-github": "^4.3.7",
+    "eslint-plugin-jest": "^27.0.4",
+    "jest": "^29.1.1",
+    "js-yaml": "^4.1.0",
+    "prettier": "^2.7.1",
+    "ts-jest": "^29.0.2",
+    "typescript": "^4.8.4"
+  },
+  "dependencies": {
+    "@actions/core": "^1.9.1"
+  }
+}

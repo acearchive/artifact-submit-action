@@ -1,0 +1,40 @@
+name: "Artifact Submit Action"
+author: "Ace Archive"
+description: >
+  A GitHub action for submitting artifacts to Ace Archive.
+inputs:
+  repo:
+    description: >
+      The GitHub repository to write the generated JSON file to.
+    required: true
+  path:
+    description: >
+      The path in the repository to write the generated JSON file to.
+    required: true
+    default: "artifacts/"
+  endpoint:
+    description: >
+      The S3 endpoint URL.
+    required: true
+  bucket:
+    description: >
+      The name of the S3 bucket.
+    required: true
+  access_key_id:
+    description: >
+      The access key ID for S3.
+    required: true
+  secret_access_key:
+    description: >
+      The secret access key for S3.
+    required: true
+outputs:
+  name:
+    description: >
+      The published IPNS name.
+runs:
+  using: "node16"
+  main: "dist/index.js"
+branding:
+  icon: tag
+  color: blue
