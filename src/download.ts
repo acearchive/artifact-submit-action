@@ -39,7 +39,7 @@ export type FileValidationSuccess = Readonly<{
 
 export type FileValidationFail = Readonly<{
   isVaild: false;
-  algorithmTypeMatches: boolean;
+  algorithmMatches: boolean;
   actualDigest: MultihashDigest;
 }>;
 
@@ -58,7 +58,7 @@ export const validateFile = async <Code extends SupportedCodes>(
   if (actualDigest.code !== expectedDigest.code) {
     return {
       isVaild: false,
-      algorithmTypeMatches: false,
+      algorithmMatches: false,
       actualDigest,
     };
   }
@@ -66,7 +66,7 @@ export const validateFile = async <Code extends SupportedCodes>(
   if (actualDigest.bytes !== expectedDigest.bytes) {
     return {
       isVaild: false,
-      algorithmTypeMatches: true,
+      algorithmMatches: true,
       actualDigest,
     };
   }
