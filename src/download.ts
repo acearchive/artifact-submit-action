@@ -1,0 +1,78 @@
+import fs from "fs";
+import afs from "fs/promises";
+import path from "path";
+import https from "https";
+import contentType from "content-type";
+
+import { MultihashDigest } from "multiformats/hashes/interface";
+import { algorithmByCode, hashFile, SupportedCodes } from "./hash";
+
+const downloadFile = async (
+  url: URL
+): Promise<{ path: fs.PathLike; contentType?: string }> => {
+  const tempDirPath = await afs.mkdtemp("artifact-submit-action-");
+  const tempFile = fs.createWriteStream(path.join(tempDirPath, "file"));
+
+  return new Promise((resolve) => {
+    https.get(url, (response) => {
+      response.pipe(tempFile);
+
+      tempFile.on("finish", () => {
+        tempFile.close();
+
+        resolve({
+          path: tempFile.path,
+          contentType:
+            response.headers.contentType === undefined
+              ? undefined
+              : contentType.parse(response).type,
+        });
+      });
+    });
+  });
+};
+
+export type FileValidationSuccess = Readonly<{
+  isValid: true;
+  path: fs.PathLike;
+}>;
+
+export type FileValidationFail = Readonly<{
+  isVaild: false;
+  algorithmTypeMatches: boolean;
+  actualDigest: MultihashDigest;
+}>;
+
+export type FileValidationResult = FileValidationSuccess | FileValidationFail;
+
+export const validateFile = async <Code extends SupportedCodes>(
+  url: URL,
+  expectedDigest: MultihashDigest<Code>
+): Promise<FileValidationResult> => {
+  const downloadedFile = await downloadFile(url);
+  const actualDigest = await hashFile(
+    downloadedFile.path,
+    algorithmByCode(expectedDigest.code)
+  );
+
+  if (actualDigest.code !== expectedDigest.code) {
+    return {
+      isVaild: false,
+      algorithmTypeMatches: false,
+      actualDigest,
+    };
+  }
+
+  if (actualDigest.bytes !== expectedDigest.bytes) {
+    return {
+      isVaild: false,
+      algorithmTypeMatches: true,
+      actualDigest,
+    };
+  }
+
+  return {
+    isValid: true,
+    path: downloadedFile.path,
+  };
+};
