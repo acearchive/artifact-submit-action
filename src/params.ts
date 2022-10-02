@@ -38,18 +38,13 @@ export default (): Params => {
   const s3SecretAccessKey = core.getInput("s3_secret_access_key", {
     required: true,
   });
-  const cloudflareAccountId = core.getInput("cloudflare_account_id", {
-    required: true,
-  });
   const cloudflareApiToken = core.getInput("cloudflare_api_token", {
     required: true,
   });
 
-  // Not all of these are strictly secrets, but exposing less information is
-  // preferable.
+  // The S3 access key ID isn't strictly a secret, but we're redacting it anyways.
   core.setSecret(s3AccessKeyId);
   core.setSecret(s3SecretAccessKey);
-  core.setSecret(cloudflareAccountId);
   core.setSecret(cloudflareApiToken);
 
   return Joi.attempt(
@@ -63,7 +58,9 @@ export default (): Params => {
       s3Region: core.getInput("s3_region", { required: true }),
       s3AccessKeyId,
       s3SecretAccessKey,
-      cloudflareAccountId,
+      cloudflareAccountId: core.getInput("cloudflare_account_id", {
+        required: true,
+      }),
       cloudflareApiToken,
       kvNamespaceId: core.getInput("kv_namespace_id", { required: true }),
     },
