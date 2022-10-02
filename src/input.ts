@@ -1,7 +1,6 @@
 import path from "path";
-import { decode as decodeMultihash } from "multiformats/hashes/digest";
 import { Artifact } from "./api";
-import { algorithmName, isSupportedCode } from "./hash";
+import { algorithmName, fromHex, isSupportedCode } from "./hash";
 import { Params } from "./params";
 
 export type ArtifactFileInput = Readonly<{
@@ -39,7 +38,7 @@ export const toApi = (input: ArtifactInput, params: Params): Artifact => ({
   summary: input.summary,
   description: input.description,
   files: input.files.map((fileInput) => {
-    const multihash = decodeMultihash(Buffer.from(fileInput.multihash, "hex"));
+    const multihash = fromHex(fileInput.multihash);
 
     if (!isSupportedCode(multihash.code)) {
       throw new Error(

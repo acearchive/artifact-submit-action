@@ -1,8 +1,13 @@
 import fs from "fs";
 import stream from "stream";
 import { Params } from "./params";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  paginateListObjectsV2,
+} from "@aws-sdk/client-s3";
 import { MultihashDigest } from "multiformats/hashes/interface";
+import { fromHex } from "./hash";
 
 export const newClient = (params: Params): S3Client => {
   return new S3Client({
@@ -33,7 +38,6 @@ const putObject = async ({
 }): Promise<void> => {
   await client.send(
     new PutObjectCommand({
-      // Key: prefix + Buffer.from(multihash.bytes).toString("hex"),
       Key: key,
       Body: body,
       Bucket: bucket,
@@ -41,6 +45,39 @@ const putObject = async ({
       ContentLength: contentLength,
     })
   );
+};
+
+const pageSize = 200;
+
+const listObjectKeys = async ({
+  client,
+  bucket,
+  prefix,
+}: {
+  client: S3Client;
+  bucket: string;
+  prefix: string;
+}): Promise<Set<string>> => {
+  const paginator = paginateListObjectsV2(
+    { client, pageSize: pageSize },
+    {
+      Bucket: bucket,
+      Prefix: prefix,
+    }
+  );
+
+  const keys = new Set<string>();
+
+  for await (const page of paginator) {
+    if (page.Contents === undefined) continue;
+
+    for (const obj of page.Contents) {
+      if (obj.Key === undefined) continue;
+      keys.add(obj.Key);
+    }
+  }
+
+  return keys;
 };
 
 export const putArtifactFile = async ({
@@ -68,4 +105,24 @@ export const putArtifactFile = async ({
     mediaType,
     contentLength: fileStats.size,
   });
+};
+
+export const listMultihashes = async ({
+  client,
+  bucket,
+  prefix,
+}: {
+  client: S3Client;
+  bucket: string;
+  prefix: string;
+}): Promise<Set<MultihashDigest>> => {
+  const multihashes = new Set<MultihashDigest>();
+
+  const keys = await listObjectKeys({ client, bucket, prefix });
+
+  for (const key of keys) {
+    multihashes.add(fromHex(key));
+  }
+
+  return multihashes;
 };

@@ -80,6 +80,9 @@ export const isSupportedCode = (code: number): code is SupportedCode =>
 export const algorithmName = (code: SupportedCode): string =>
   algorithmByCode(code).name;
 
+export const fromHex = (hex: string): MultihashDigest =>
+  multihash.decode(Buffer.from(hex, "hex"));
+
 export const blake2b512: MultihashAlgorithm<MultihashCodes["blake2b512"]> =
   new NodeMultihashAlgorithm(
     "blake2b-512",
