@@ -14,12 +14,16 @@ inputs:
     default: "artifacts/"
   endpoint:
     description: >
-      The S3 endpoint URL.
-    required: true
+      The S3 endpoint URL. This is only required when using a non-AWS
+      implementation of the S3 API.
   bucket:
     description: >
       The name of the S3 bucket.
     required: true
+  prefix:
+    description: >
+      A prefix to add to all S3 object keys. You can also think of this like the
+      name of a "directory" in the bucket.
   region:
     description: >
       The AWS region name for S3.
