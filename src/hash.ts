@@ -57,13 +57,13 @@ const multihashCodes = {
   blake2b512: 0xb240,
 } as const;
 
-const supportedCodes = Object.values(multihashCodes);
+const supportedCodes: Set<number> = new Set(Object.values(multihashCodes));
 
 type MultihashCodes = typeof multihashCodes;
 
-export type SupportedCodes = typeof supportedCodes[number];
+export type SupportedCode = MultihashCodes[keyof MultihashCodes];
 
-export const algorithmByCode = <Code extends SupportedCodes>(
+export const algorithmByCode = <Code extends SupportedCode>(
   code: Code
 ): MultihashAlgorithm<Code> => {
   switch (code) {
@@ -73,6 +73,12 @@ export const algorithmByCode = <Code extends SupportedCodes>(
       throw new TypeError("there is no algorithm with this code");
   }
 };
+
+export const isSupportedCode = (code: number): code is SupportedCode =>
+  supportedCodes.has(code);
+
+export const algorithmName = (code: SupportedCode): string =>
+  algorithmByCode(code).name;
 
 export const blake2b512: MultihashAlgorithm<MultihashCodes["blake2b512"]> =
   new NodeMultihashAlgorithm(

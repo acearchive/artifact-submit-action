@@ -12,6 +12,10 @@ inputs:
       The path in the repository to write the generated JSON file to.
     required: true
     default: "artifacts/"
+  baseUrl:
+    description: >
+      The base URL that artifact files will be hosted from.
+    required: true
   endpoint:
     description: >
       The S3 endpoint URL. This is only required when using a non-AWS

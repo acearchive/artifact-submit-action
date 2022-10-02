@@ -6,7 +6,7 @@ import contentType from "content-type";
 
 import { MultihashDigest } from "multiformats/hashes/interface";
 import { equals as digestEquals } from "multiformats/hashes/digest";
-import { algorithmByCode, hashFile, SupportedCodes } from "./hash";
+import { algorithmByCode, hashFile, SupportedCode } from "./hash";
 
 const downloadFile = async (
   url: URL
@@ -46,7 +46,7 @@ export type FileValidationFail = Readonly<{
 
 export type FileValidationResult = FileValidationSuccess | FileValidationFail;
 
-export default async <Code extends SupportedCodes>(
+export default async <Code extends SupportedCode>(
   url: URL,
   expectedDigest: MultihashDigest<Code>
 ): Promise<FileValidationResult> => {

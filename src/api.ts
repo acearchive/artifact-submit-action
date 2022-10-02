@@ -9,7 +9,7 @@ export type ArtifactFile = Readonly<{
 
 export type ArtifactLink = Readonly<{
   name: string;
-  link: string;
+  url: string;
 }>;
 
 export type Artifact = Readonly<{
