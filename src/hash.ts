@@ -51,6 +51,13 @@ class NodeMultihashAlgorithm<Code extends number>
   }
 }
 
+const invalidCodeError = (code: number): Error =>
+  new Error(
+    `A hash algorithm with the multihash code 0x${code.toString(
+      16
+    )} is not supported.\nFor more information, see this repo: https://github.com/multiformats/multicodec`
+  );
+
 const multihashCodes = {
   blake2b512: 0xb240,
 } as const;
@@ -61,25 +68,37 @@ type MultihashCodes = typeof multihashCodes;
 
 export type SupportedCode = MultihashCodes[keyof MultihashCodes];
 
-export const algorithmByCode = <Code extends SupportedCode>(
-  code: Code
-): MultihashAlgorithm<Code> => {
+export const algorithmByCode = (
+  code: number
+): MultihashAlgorithm<SupportedCode> => {
   switch (code) {
     case multihashCodes.blake2b512:
-      return blake2b512 as MultihashAlgorithm<Code>;
+      return blake2b512 as MultihashAlgorithm<SupportedCode>;
     default:
-      throw new TypeError("there is no algorithm with this code");
+      throw invalidCodeError(code);
   }
 };
 
-export const isSupportedCode = (code: number): code is SupportedCode =>
+const isSupportedCode = (code: number): code is SupportedCode =>
   supportedCodes.has(code);
 
-export const algorithmName = (code: SupportedCode): string =>
+export const isSupportedAlgorithm = (
+  algorithm: MultihashAlgorithm
+): algorithm is MultihashAlgorithm<SupportedCode> =>
+  isSupportedCode(algorithm.code);
+
+export const isSupportedDigest = (
+  digest: MultihashDigest
+): digest is MultihashDigest<SupportedCode> => isSupportedCode(digest.code);
+
+export const algorithmName = (code: number): string =>
   algorithmByCode(code).name;
 
-export const fromHex = (hex: string): MultihashDigest =>
+export const decodeMultihash = (hex: string): MultihashDigest =>
   multihash.decode(Buffer.from(hex, "hex"));
+
+export const debugPrintDigest = (digest: MultihashDigest): string =>
+  `${algorithmName(digest.code)}:${Buffer.from(digest.digest).toString("hex")}`;
 
 export const blake2b512: MultihashAlgorithm<MultihashCodes["blake2b512"]> =
   new NodeMultihashAlgorithm(

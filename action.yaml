@@ -3,15 +3,17 @@ author: "Ace Archive"
 description: >
   A GitHub action for submitting artifacts to Ace Archive.
 inputs:
-  repo:
+  upload:
     description: >
-      The GitHub repository to write the generated JSON file to.
+      If `true`, validate the syntax of the submission files and upload files to
+      S3. If `false, just validate.
     required: true
+    default: "false"
   path:
     description: >
-      The path in the repository to write the generated JSON file to.
+      The path of the directory in the git repository to read the submission
+      JSON files from.
     required: true
-    default: "artifacts/"
   base_url:
     description: >
       The base URL that artifact files will be hosted from.

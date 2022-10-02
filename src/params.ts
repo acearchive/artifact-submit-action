@@ -4,7 +4,7 @@ import Joi from "joi";
 import * as core from "@actions/core";
 
 export type Params = Readonly<{
-  repo: URL;
+  upload: boolean;
   path: string;
   baseUrl: URL;
   s3Endpoint?: URL;
@@ -19,7 +19,7 @@ export type Params = Readonly<{
 }>;
 
 const schema = Joi.object({
-  repo: Joi.string().uri().required(),
+  upload: Joi.boolean(),
   path: Joi.string().uri({ relativeOnly: true }).required(),
   baseUrl: Joi.string().uri({ scheme: "https" }).required(),
   s3Endpoint: Joi.string().uri(),
@@ -48,7 +48,7 @@ export default (): Params => {
 
   return Joi.attempt(
     {
-      repo: core.getInput("repo", { required: true }),
+      upload: core.getInput("upload", { required: true }),
       path: core.getInput("path", { required: true }),
       baseUrl: core.getInput("base_url", { required: true }),
       s3Endpoint: core.getInput("s3_endpoint"),

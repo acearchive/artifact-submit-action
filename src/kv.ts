@@ -46,3 +46,5 @@ const putArtifactMetadata = async ({
     obj: artifact,
   });
 };
+
+export default putArtifactMetadata;

@@ -1,29 +1,29 @@
 import path from "path";
 import { Artifact } from "./api";
-import { algorithmName, fromHex, isSupportedCode } from "./hash";
+import { algorithmName, decodeMultihash } from "./hash";
 import { Params } from "./params";
 
-export type ArtifactFileInput = Readonly<{
+export type ArtifactFileSubmission = Readonly<{
   name: string;
   fileName: string;
   mediaType?: string;
   multihash: string;
-  sourceUrl: string;
+  sourceUrl: URL;
 }>;
 
-export type ArtifactLinkInput = Readonly<{
+export type ArtifactLinkSubmission = Readonly<{
   name: string;
-  url: string;
+  url: URL;
 }>;
 
-export type ArtifactInput = Readonly<{
+export type ArtifactSubmission = Readonly<{
   version: number;
   slug: string;
   title: string;
   summary: string;
   description?: string;
-  files: ReadonlyArray<ArtifactFileInput>;
-  links: ReadonlyArray<ArtifactLinkInput>;
+  files: ReadonlyArray<ArtifactFileSubmission>;
+  links: ReadonlyArray<ArtifactLinkSubmission>;
   people: ReadonlyArray<string>;
   identities: ReadonlyArray<string>;
   fromYear: number;
@@ -32,21 +32,13 @@ export type ArtifactInput = Readonly<{
   aliases: ReadonlyArray<string>;
 }>;
 
-export const toApi = (input: ArtifactInput, params: Params): Artifact => ({
+export const toApi = (input: ArtifactSubmission, params: Params): Artifact => ({
   slug: input.slug,
   title: input.title,
   summary: input.summary,
   description: input.description,
   files: input.files.map((fileInput) => {
-    const multihash = fromHex(fileInput.multihash);
-
-    if (!isSupportedCode(multihash.code)) {
-      throw new Error(
-        `a hash algorithm with the multiformats multihash code 0x${multihash.code.toString(
-          16
-        )} is not supported`
-      );
-    }
+    const multihash = decodeMultihash(fileInput.multihash);
 
     return {
       name: fileInput.name,
@@ -63,7 +55,7 @@ export const toApi = (input: ArtifactInput, params: Params): Artifact => ({
   }),
   links: input.links.map((linkInput) => ({
     name: linkInput.name,
-    url: linkInput.url,
+    url: linkInput.url.toString(),
   })),
   people: input.people,
   identities: input.identities,

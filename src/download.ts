@@ -8,7 +8,7 @@ import fetch from "node-fetch";
 import { MultihashDigest } from "multiformats/hashes/interface";
 import { equals as digestEquals } from "multiformats/hashes/digest";
 
-import { algorithmByCode, hashFile, SupportedCode } from "./hash";
+import { algorithmByCode, hashFile } from "./hash";
 
 const downloadFile = async (
   url: URL
@@ -39,16 +39,15 @@ export type FileValidationSuccess = Readonly<{
 }>;
 
 export type FileValidationFail = Readonly<{
-  isVaild: false;
-  algorithmMatches: boolean;
+  isValid: false;
   actualDigest: MultihashDigest;
 }>;
 
 export type FileValidationResult = FileValidationSuccess | FileValidationFail;
 
-export default async <Code extends SupportedCode>(
+export default async (
   url: URL,
-  expectedDigest: MultihashDigest<Code>
+  expectedDigest: MultihashDigest
 ): Promise<FileValidationResult> => {
   const downloadedFile = await downloadFile(url);
   const actualDigest = await hashFile(
@@ -56,18 +55,9 @@ export default async <Code extends SupportedCode>(
     algorithmByCode(expectedDigest.code)
   );
 
-  if (actualDigest.code !== expectedDigest.code) {
+  if (!digestEquals(actualDigest, expectedDigest)) {
     return {
-      isVaild: false,
-      algorithmMatches: false,
-      actualDigest,
-    };
-  }
-
-  if (digestEquals(actualDigest, expectedDigest)) {
-    return {
-      isVaild: false,
-      algorithmMatches: true,
+      isValid: false,
       actualDigest,
     };
   }

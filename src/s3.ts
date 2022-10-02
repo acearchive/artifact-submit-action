@@ -7,7 +7,7 @@ import {
   paginateListObjectsV2,
 } from "@aws-sdk/client-s3";
 import { MultihashDigest } from "multiformats/hashes/interface";
-import { fromHex } from "./hash";
+import { decodeMultihash } from "./hash";
 
 export const newClient = (params: Params): S3Client => {
   return new S3Client({
@@ -121,7 +121,7 @@ export const listMultihashes = async ({
   const keys = await listObjectKeys({ client, bucket, prefix });
 
   for (const key of keys) {
-    multihashes.add(fromHex(key));
+    multihashes.add(decodeMultihash(key));
   }
 
   return multihashes;
