@@ -5,6 +5,7 @@ import https from "https";
 import contentType from "content-type";
 
 import { MultihashDigest } from "multiformats/hashes/interface";
+import { equals as digestEquals } from "multiformats/hashes/digest";
 import { algorithmByCode, hashFile, SupportedCodes } from "./hash";
 
 const downloadFile = async (
@@ -63,7 +64,7 @@ export const validateFile = async <Code extends SupportedCodes>(
     };
   }
 
-  if (actualDigest.bytes !== expectedDigest.bytes) {
+  if (digestEquals(actualDigest, expectedDigest)) {
     return {
       isVaild: false,
       algorithmMatches: true,
