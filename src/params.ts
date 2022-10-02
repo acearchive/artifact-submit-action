@@ -1,7 +1,7 @@
 import { URL } from "url";
 import * as core from "@actions/core";
 
-type Inputs = Readonly<{
+type Params = Readonly<{
   repo: URL;
   path: string;
   endpoint: URL;
@@ -10,7 +10,7 @@ type Inputs = Readonly<{
   secret_access_key: string;
 }>;
 
-export default (): Inputs => {
+export default (): Params => {
   const raw_repo = core.getInput("repo", { required: true });
   const raw_path = core.getInput("path", { required: true });
   const raw_endpoint = core.getInput("endpoint", { required: true });
