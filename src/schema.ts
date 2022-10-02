@@ -8,10 +8,11 @@ export default Joi.object({
     .pattern(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/)
     .min(16)
     .max(64)
+    .empty("")
     .required(),
-  title: Joi.string().trim().max(100).required(),
-  summary: Joi.string().trim().max(150).required(),
-  description: Joi.string().trim().max(1000),
+  title: Joi.string().trim().max(100).empty("").required(),
+  summary: Joi.string().trim().max(150).empty("").required(),
+  description: Joi.string().trim().max(1000).empty(""),
   files: Joi.array()
     .unique(
       (a, b) =>
@@ -22,31 +23,37 @@ export default Joi.object({
     )
     .items(
       Joi.object({
-        name: Joi.string().max(100).required(),
+        name: Joi.string().max(100).empty("").required(),
         fileName: Joi.string()
           .pattern(
             /^[a-z0-9][a-z0-9-]*[a-z0-9](\/[a-z0-9][a-z0-9-]*[a-z0-9])*(\.[a-z0-9]+)*$/
           )
+          .empty("")
           .required(),
-        mediaType: Joi.string().pattern(
-          /^(application|audio|font|image|model|text|video|message|multipart)\/[\w\d.+-]+$/
-        ),
-        multihash: Joi.string().hex().required(),
+        mediaType: Joi.string()
+          .pattern(
+            /^(application|audio|font|image|model|text|video|message|multipart)\/[\w\d.+-]+$/
+          )
+          .empty(""),
+        multihash: Joi.string().hex().empty("").required(),
         sourceUrl: Joi.string()
           .uri({ scheme: ["http", "https"] })
+          .empty("")
           .required(),
       })
-    ),
+    )
+    .default([]),
   links: Joi.array()
     .unique((a, b) => a.url === b.url)
     .items(
       Joi.object({
-        name: Joi.string().required(),
-        url: Joi.string().uri({ scheme: "https" }).required(),
+        name: Joi.string().empty("").required(),
+        url: Joi.string().uri({ scheme: "https" }).empty("").required(),
       })
-    ),
-  people: Joi.array().unique().items(Joi.string()),
-  identities: Joi.array().unique().items(Joi.string()),
+    )
+    .default([]),
+  people: Joi.array().unique().items(Joi.string().empty("")).default([]),
+  identities: Joi.array().unique().items(Joi.string().empty("")).default([]),
   fromYear: Joi.number().integer().max(new Date().getUTCFullYear()).required(),
   toYear: Joi.number()
     .integer()
@@ -61,6 +68,7 @@ export default Joi.object({
         .min(Joi.ref("fromYear"))
         .max(Joi.ref("toYear"))
         .multiple(10)
-    ),
-  aliases: Joi.array().unique().items(Joi.link("/slug")),
+    )
+    .default([]),
+  aliases: Joi.array().unique().items(Joi.link("/slug")).default([]),
 });
