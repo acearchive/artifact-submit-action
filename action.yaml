@@ -50,9 +50,9 @@ inputs:
     description: >
       The secret Cloudflare API token to authenticate with Workers KV.
     required: true
-  kv_namespace:
+  kv_namespace_id:
     description: >
-      The namespace identifier for Cloudflare Workers KV.
+      The namespace ID for Cloudflare Workers KV.
     required: true
 outputs:
   name:

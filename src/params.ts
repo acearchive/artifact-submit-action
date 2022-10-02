@@ -15,7 +15,7 @@ export type Params = Readonly<{
   s3SecretAccessKey: string;
   cloudflareAccountId: string;
   cloudflareApiToken: string;
-  kvNamespace: string;
+  kvNamespaceId: string;
 }>;
 
 const schema = Joi.object({
@@ -30,7 +30,7 @@ const schema = Joi.object({
   s3SecretAccessKey: Joi.string().required(),
   cloudflareAccountId: Joi.string().required(),
   cloudflareApiToken: Joi.string().required(),
-  kvNamespace: Joi.string().required(),
+  kvNamespaceId: Joi.string().required(),
 });
 
 export default (): Params => {
@@ -65,7 +65,7 @@ export default (): Params => {
       s3SecretAccessKey,
       cloudflareAccountId,
       cloudflareApiToken,
-      kvNamespace: core.getInput("kv_namespace", { required: true }),
+      kvNamespaceId: core.getInput("kv_namespace_id", { required: true }),
     },
     schema,
     { abortEarly: false }

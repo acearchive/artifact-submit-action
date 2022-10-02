@@ -87,7 +87,7 @@ const main = async (): Promise<void> => {
     await putArtifactMetadata({
       accountId: params.cloudflareAccountId,
       secretToken: params.cloudflareApiToken,
-      namespace: params.kvNamespace,
+      namespace: params.kvNamespaceId,
       artifact: toApi(submission, params),
     });
 
