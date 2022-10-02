@@ -8,7 +8,7 @@ const listSubmissionFiles = async (
   const repoPath = process.env.GITHUB_WORKSPACE;
   if (repoPath === undefined) {
     throw new Error(
-      "The environment variable GITHUB_WORKSPACE is undefined.\nThis tool is expecting to be run in a GitHub Action and needs to know the path of the checked-out git repository."
+      "The environment variable GITHUB_WORKSPACE is undefined.\nThis tool is expecting to be run in a GitHub Actions workflow and needs to know the path of the checked-out git repository."
     );
   }
 

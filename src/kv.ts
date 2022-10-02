@@ -1,6 +1,14 @@
 import fetch from "node-fetch";
 import { version as apiVersion, Artifact } from "./api";
 
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { readonly [property: string]: JsonValue }
+  | ReadonlyArray<JsonValue>;
+
 const putKey = async ({
   accountId,
   secretToken,
@@ -12,7 +20,7 @@ const putKey = async ({
   secretToken: string;
   namespace: string;
   key: string;
-  obj: any;
+  obj: JsonValue;
 }): Promise<void> => {
   await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/values/${key}`,
