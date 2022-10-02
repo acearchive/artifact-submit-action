@@ -2,7 +2,7 @@ import Joi from "joi";
 
 const CurrentVersion = 1;
 
-const InputSchema = Joi.object({
+export default Joi.object({
   version: Joi.number().integer().equal(CurrentVersion).required(),
   slug: Joi.string()
     .pattern(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/)

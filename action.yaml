@@ -20,6 +20,10 @@ inputs:
     description: >
       The name of the S3 bucket.
     required: true
+  region:
+    description: >
+      The AWS region name for S3.
+    required: true
   access_key_id:
     description: >
       The access key ID for S3.

@@ -1,34 +1,47 @@
 import { URL } from "url";
+
+import Joi from "joi";
 import * as core from "@actions/core";
 
-type Params = Readonly<{
+export type Params = Readonly<{
   repo: URL;
   path: string;
-  endpoint: URL;
+  endpoint?: URL;
   bucket: string;
-  access_key_id: string;
-  secret_access_key: string;
+  prefix: string;
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
 }>;
 
+const schema = Joi.object({
+  repo: Joi.string().uri().required(),
+  path: Joi.string().uri({ relativeOnly: true }).required(),
+  endpoint: Joi.string().uri(),
+  bucket: Joi.string().required(),
+  region: Joi.string().required(),
+  accessKeyId: Joi.string().required(),
+  secretAccessKey: Joi.string().required(),
+});
+
 export default (): Params => {
-  const raw_repo = core.getInput("repo", { required: true });
-  const raw_path = core.getInput("path", { required: true });
-  const raw_endpoint = core.getInput("endpoint", { required: true });
-  const raw_bucket = core.getInput("bucket", { required: true });
-  const raw_access_key_id = core.getInput("access_key_id", { required: true });
-  const raw_secret_access_key = core.getInput("secret_access_key", {
-    required: true,
-  });
+  const accessKeyId = core.getInput("access_key_id", { required: true });
+  const secretAccessKey = core.getInput("access_key_id", { required: true });
 
-  core.setSecret(raw_access_key_id);
-  core.setSecret(raw_secret_access_key);
+  core.setSecret(accessKeyId);
+  core.setSecret(secretAccessKey);
 
-  return {
-    repo: new URL(raw_repo),
-    path: raw_path,
-    endpoint: new URL(raw_endpoint),
-    bucket: raw_bucket,
-    access_key_id: raw_access_key_id,
-    secret_access_key: raw_secret_access_key,
-  };
+  return Joi.attempt(
+    {
+      repo: core.getInput("repo", { required: true }),
+      path: core.getInput("path", { required: true }),
+      endpoint: core.getInput("endpoint"),
+      bucket: core.getInput("bucket", { required: true }),
+      region: core.getInput("region", { required: true }),
+      accessKeyId,
+      secretAccessKey,
+    },
+    schema,
+    { abortEarly: false }
+  );
 };
