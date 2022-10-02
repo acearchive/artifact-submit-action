@@ -11,11 +11,11 @@ import { fromHex } from "./hash";
 
 export const newClient = (params: Params): S3Client => {
   return new S3Client({
-    region: params.region,
-    endpoint: params.endpoint?.toString(),
+    region: params.s3Region,
+    endpoint: params.s3Endpoint?.toString(),
     credentials: {
-      accessKeyId: params.accessKeyId,
-      secretAccessKey: params.secretAccessKey,
+      accessKeyId: params.s3AccessKeyId,
+      secretAccessKey: params.s3SecretAccessKey,
     },
   });
 };

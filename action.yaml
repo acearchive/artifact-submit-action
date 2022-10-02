@@ -12,33 +12,45 @@ inputs:
       The path in the repository to write the generated JSON file to.
     required: true
     default: "artifacts/"
-  baseUrl:
+  base_url:
     description: >
       The base URL that artifact files will be hosted from.
     required: true
-  endpoint:
+  s3_endpoint:
     description: >
       The S3 endpoint URL. This is only required when using a non-AWS
       implementation of the S3 API.
-  bucket:
+  s3_bucket:
     description: >
       The name of the S3 bucket.
     required: true
-  prefix:
+  s3_prefix:
     description: >
       A prefix to add to all S3 object keys. You can also think of this like the
       name of a "directory" in the bucket.
-  region:
+  s3_region:
     description: >
       The AWS region name for S3.
     required: true
-  access_key_id:
+  s3_access_key_id:
     description: >
       The access key ID for S3.
     required: true
-  secret_access_key:
+  s3_secret_access_key:
     description: >
       The secret access key for S3.
+    required: true
+  cloudflare_account_id:
+    description: >
+      The Cloudflare account ID for Workers KV.
+    required: true
+  cloudflare_api_token:
+    description: >
+      The secret Cloudflare API token to authenticate with Workers KV.
+    required: true
+  kv_namespace:
+    description: >
+      The namespace identifier for Cloudflare Workers KV.
     required: true
 outputs:
   name:

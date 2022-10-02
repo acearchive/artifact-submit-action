@@ -1,3 +1,5 @@
+export const version = 0;
+
 export type ArtifactFile = Readonly<{
   name: string;
   fileName: string;

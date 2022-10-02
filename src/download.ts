@@ -10,10 +10,6 @@ import { equals as digestEquals } from "multiformats/hashes/digest";
 
 import { algorithmByCode, hashFile, SupportedCode } from "./hash";
 
-export const header = {
-  contentType: "Content-Type",
-};
-
 const downloadFile = async (
   url: URL
 ): Promise<{ path: fs.PathLike; mediaType?: string }> => {
@@ -26,7 +22,7 @@ const downloadFile = async (
     await stream.pipeline(response.body, tempFile);
   }
 
-  const responseContentType = response.headers.get(header.contentType);
+  const responseContentType = response.headers.get("Content-Type");
 
   return {
     path: tempFile.path,
