@@ -11,6 +11,8 @@ export type JsonValue =
   | { readonly [property: string]: JsonValue }
   | ReadonlyArray<JsonValue>;
 
+export type JsonObject = Readonly<Record<string, JsonValue>>;
+
 export type ArtifactFileSubmission = Readonly<{
   name: string;
   fileName: string;

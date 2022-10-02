@@ -1,6 +1,6 @@
 import path from "path";
 import fsPromises from "fs/promises";
-import { JsonValue } from "./submission";
+import { JsonObject } from "./submission";
 
 const submissionFileExt = "json";
 
@@ -26,17 +26,20 @@ const listSubmissionFiles = async (
 const getSubmissions = async (
   repoPath: string,
   submissionPath: string
-): Promise<ReadonlyArray<JsonValue>> => {
+): Promise<ReadonlyArray<JsonObject>> => {
   const fileNames = await listSubmissionFiles(repoPath, submissionPath);
 
-  const submissions: JsonValue[] = [];
+  const submissions: JsonObject[] = [];
 
   for (const fileName of fileNames) {
     const fileContent = await fsPromises.readFile(fileName, {
       encoding: "utf-8",
     });
 
-    submissions.push(JSON.parse(fileContent));
+    const fileJson = JSON.parse(fileContent);
+    fileJson.slug = path.parse(fileName).name;
+
+    submissions.push(fileJson);
   }
 
   return submissions;

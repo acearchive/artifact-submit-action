@@ -19,7 +19,12 @@ const main = async (): Promise<void> => {
   const submissions = new Array<ArtifactSubmission>(rawSubmissions.length);
 
   for (const rawSubmission of rawSubmissions) {
-    submissions.push(Joi.attempt(rawSubmission, submissionSchema));
+    submissions.push(
+      Joi.attempt(rawSubmission, submissionSchema, {
+        abortEarly: false,
+        convert: false,
+      })
+    );
   }
 
   core.info(`All submissions are syntactically valid!`);
