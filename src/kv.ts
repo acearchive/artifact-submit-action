@@ -1,13 +1,6 @@
 import fetch from "node-fetch";
 import { version as apiVersion, Artifact } from "./api";
-
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | { readonly [property: string]: JsonValue }
-  | ReadonlyArray<JsonValue>;
+import { JsonValue } from "./submission";
 
 const putKey = async ({
   accountId,

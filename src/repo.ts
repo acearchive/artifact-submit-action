@@ -1,17 +1,13 @@
 import path from "path";
 import fsPromises from "fs/promises";
-import { ArtifactSubmission } from "./submission";
+import { JsonValue } from "./submission";
+
+const submissionFileExt = "json";
 
 const listSubmissionFiles = async (
+  repoPath: string,
   submissionPath: string
 ): Promise<ReadonlyArray<string>> => {
-  const repoPath = process.env.GITHUB_WORKSPACE;
-  if (repoPath === undefined) {
-    throw new Error(
-      "The environment variable GITHUB_WORKSPACE is undefined.\nThis tool is expecting to be run in a GitHub Actions workflow and needs to know the path of the checked-out git repository."
-    );
-  }
-
   const entries = await fsPromises.readdir(
     path.join(repoPath, submissionPath),
     {
@@ -20,16 +16,20 @@ const listSubmissionFiles = async (
   );
 
   return entries
-    .filter((entry) => entry.isFile() && path.extname(entry.name) === "json")
+    .filter(
+      (entry) =>
+        entry.isFile() && path.extname(entry.name) === submissionFileExt
+    )
     .map((entry) => entry.name);
 };
 
 const getSubmissions = async (
+  repoPath: string,
   submissionPath: string
-): Promise<ReadonlyArray<ArtifactSubmission>> => {
-  const fileNames = await listSubmissionFiles(submissionPath);
+): Promise<ReadonlyArray<JsonValue>> => {
+  const fileNames = await listSubmissionFiles(repoPath, submissionPath);
 
-  const submissions: ArtifactSubmission[] = [];
+  const submissions: JsonValue[] = [];
 
   for (const fileName of fileNames) {
     const fileContent = await fsPromises.readFile(fileName, {

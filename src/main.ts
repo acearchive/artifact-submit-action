@@ -8,21 +8,25 @@ import downloadAndVerify from "./download";
 import putArtifactMetadata from "./kv";
 import { debugPrintDigest, decodeMultihash } from "./hash";
 import { listMultihashes, newClient, putArtifactFile } from "./s3";
-import { toApi } from "./submission";
+import { ArtifactSubmission, toApi } from "./submission";
 
 const main = async (): Promise<void> => {
   const params = getParams();
-  const submissions = await getSubmissions(params.path);
+  const rawSubmissions = await getSubmissions(params.repo, params.path);
 
-  core.info(`Found ${submissions.length} JSON submission files in the repo.`);
+  core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
 
-  for (const submission of submissions) {
-    Joi.attempt(submission, submissionSchema);
+  const submissions = new Array<ArtifactSubmission>(rawSubmissions.length);
+
+  for (const rawSubmission of rawSubmissions) {
+    submissions.push(Joi.attempt(rawSubmission, submissionSchema));
   }
 
-  core.info(`All submission files are valid!`);
+  core.info(`All submissions are syntactically valid!`);
 
   if (!params.upload) return;
+
+  core.info("Starting the upload process...");
 
   const s3Client = newClient(params);
   const existingMultihashes = await listMultihashes({

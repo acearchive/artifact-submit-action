@@ -3,6 +3,14 @@ import { Artifact } from "./api";
 import { algorithmName, decodeMultihash } from "./hash";
 import { Params } from "./params";
 
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { readonly [property: string]: JsonValue }
+  | ReadonlyArray<JsonValue>;
+
 export type ArtifactFileSubmission = Readonly<{
   name: string;
   fileName: string;

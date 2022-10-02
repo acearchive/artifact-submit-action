@@ -5,6 +5,7 @@ import * as core from "@actions/core";
 
 export type Params = Readonly<{
   upload: boolean;
+  repo: string;
   path: string;
   baseUrl: URL;
   s3Endpoint?: URL;
@@ -19,18 +20,19 @@ export type Params = Readonly<{
 }>;
 
 const schema = Joi.object({
-  upload: Joi.boolean(),
-  path: Joi.string().uri({ relativeOnly: true }).required(),
-  baseUrl: Joi.string().uri({ scheme: "https" }).required(),
-  s3Endpoint: Joi.string().uri(),
-  s3Bucket: Joi.string().required(),
-  s3Prefix: Joi.string().required(),
-  s3Region: Joi.string().required(),
-  s3AccessKeyId: Joi.string().required(),
-  s3SecretAccessKey: Joi.string().required(),
-  cloudflareAccountId: Joi.string().required(),
-  cloudflareApiToken: Joi.string().required(),
-  kvNamespaceId: Joi.string().required(),
+  upload: Joi.boolean().label("upload"),
+  repo: Joi.string().required().label("GITHUB_WORKSPACE"),
+  path: Joi.string().uri({ relativeOnly: true }).required().label("path"),
+  baseUrl: Joi.string().uri({ scheme: "https" }).required().label("base_url"),
+  s3Endpoint: Joi.string().uri().label("s3_endpoint"),
+  s3Bucket: Joi.string().required().label("s3_bucket"),
+  s3Prefix: Joi.string().required().label("s3_prefix"),
+  s3Region: Joi.string().required().label("s3_region"),
+  s3AccessKeyId: Joi.string().required().label("s3_access_key_id"),
+  s3SecretAccessKey: Joi.string().required().label("s3_secret_access_key"),
+  cloudflareAccountId: Joi.string().required().label("cloudflare_account_id"),
+  cloudflareApiToken: Joi.string().required().label("cloudflare_api_token"),
+  kvNamespaceId: Joi.string().required().label("kv_namespace_id"),
 });
 
 export default (): Params => {
@@ -50,6 +52,7 @@ export default (): Params => {
   return Joi.attempt(
     {
       upload: core.getInput("upload", { required: true }),
+      repo: process.env.GITHUB_WORKSPACE,
       path: core.getInput("path", { required: true }),
       baseUrl: core.getInput("base_url", { required: true }),
       s3Endpoint: core.getInput("s3_endpoint"),
