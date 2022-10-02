@@ -5,8 +5,6 @@ import stream from "stream";
 import multihash from "multiformats/hashes/digest";
 import { MultihashDigest } from "multiformats/hashes/interface";
 
-import { pipeAsync } from "./utils";
-
 // Definitions for multihash algorithms can be found here:
 // https://github.com/multiformats/multicodec/blob/master/table.csv
 export interface MultihashAlgorithm<Code extends number = number> {
@@ -47,7 +45,7 @@ class NodeMultihashAlgorithm<Code extends number>
 
   async hash(input: stream.Readable): Promise<Uint8Array> {
     const hasher = crypto.createHash(this.opensslAlgorithm);
-    await pipeAsync(input, hasher);
+    await stream.promises.pipeline(input, hasher);
     hasher.end();
     return hasher.digest();
   }

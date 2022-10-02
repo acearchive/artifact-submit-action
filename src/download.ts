@@ -1,36 +1,40 @@
 import fs from "fs";
 import afs from "fs/promises";
 import path from "path";
-import https from "https";
-import contentType from "content-type";
+import stream from "stream/promises";
 
+import contentType from "content-type";
+import fetch from "node-fetch";
 import { MultihashDigest } from "multiformats/hashes/interface";
 import { equals as digestEquals } from "multiformats/hashes/digest";
+
 import { algorithmByCode, hashFile, SupportedCode } from "./hash";
+
+export const header = {
+  contentType: "Content-Type",
+};
 
 const downloadFile = async (
   url: URL
-): Promise<{ path: fs.PathLike; contentType?: string }> => {
+): Promise<{ path: fs.PathLike; mediaType?: string }> => {
   const tempDirPath = await afs.mkdtemp("artifact-submit-action-");
   const tempFile = fs.createWriteStream(path.join(tempDirPath, "file"));
 
-  return new Promise((resolve) => {
-    https.get(url, (response) => {
-      response.pipe(tempFile);
+  const response = await fetch(url.toString());
 
-      tempFile.on("finish", () => {
-        tempFile.close();
+  if (response.body !== null) {
+    await stream.pipeline(response.body, tempFile);
+  }
 
-        resolve({
-          path: tempFile.path,
-          contentType:
-            response.headers.contentType === undefined
-              ? undefined
-              : contentType.parse(response).type,
-        });
-      });
-    });
-  });
+  const responseContentType = response.headers.get(header.contentType);
+
+  return {
+    path: tempFile.path,
+    mediaType:
+      responseContentType === null
+        ? undefined
+        : contentType.parse(responseContentType).type,
+  };
 };
 
 export type FileValidationSuccess = Readonly<{
