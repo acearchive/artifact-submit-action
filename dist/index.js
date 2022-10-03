@@ -250,7 +250,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const params = (0, params_1.default)();
     const rawSubmissions = yield (0, repo_1.default)(params.repo, params.path);
     core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
-    const submissions = new Array(rawSubmissions.length);
+    const submissions = new Array();
     for (const rawSubmission of rawSubmissions) {
         submissions.push(joi_1.default.attempt(rawSubmission, schema_1.default, {
             abortEarly: false,
