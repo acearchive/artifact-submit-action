@@ -8,7 +8,7 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.version = void 0;
-exports.version = 0;
+exports.version = 1;
 
 
 /***/ }),
@@ -227,7 +227,7 @@ const putArtifactMetadata = ({ accountId, secretToken, namespace, artifact, }) =
         accountId,
         secretToken,
         namespace,
-        key: `api:v${api_1.version}:artifacts:${artifact.slug}`,
+        key: `artifacts:v${api_1.version}:${artifact.slug}`,
         obj: artifact,
     });
 });
@@ -281,7 +281,7 @@ const core = __importStar(__nccwpck_require__(42186));
 const joi_1 = __importDefault(__nccwpck_require__(20918));
 const params_1 = __nccwpck_require__(62017);
 const repo_1 = __nccwpck_require__(58139);
-const schema_1 = __importDefault(__nccwpck_require__(5171));
+const schema_1 = __nccwpck_require__(5171);
 const download_1 = __nccwpck_require__(95933);
 const kv_1 = __nccwpck_require__(18116);
 const hash_1 = __nccwpck_require__(41859);
@@ -293,7 +293,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
     core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
     const submissions = new Array();
     for (const rawSubmission of rawSubmissions) {
-        submissions.push(joi_1.default.attempt(rawSubmission, schema_1.default, {
+        submissions.push(joi_1.default.attempt(rawSubmission, schema_1.schema, {
             abortEarly: false,
             convert: false,
         }));
@@ -609,11 +609,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.schema = exports.version = void 0;
 const joi_1 = __importDefault(__nccwpck_require__(20918));
-const CurrentVersion = 1;
+exports.version = 1;
 const decadeFromYear = (year) => year - (year % 10);
-exports["default"] = joi_1.default.object({
-    version: joi_1.default.number().integer().equal(CurrentVersion).required(),
+exports.schema = joi_1.default.object({
+    version: joi_1.default.number().integer().equal(exports.version).required(),
     slug: joi_1.default.string()
         .pattern(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/)
         .min(16)
