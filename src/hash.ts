@@ -1,7 +1,7 @@
 import fs from "fs";
-import crypto from "crypto";
 import stream from "stream";
 
+import hasha from "hasha";
 import * as multihash from "multiformats/hashes/digest";
 import { MultihashDigest } from "multiformats/hashes/interface";
 
@@ -10,46 +10,16 @@ import { MultihashDigest } from "multiformats/hashes/interface";
 export interface MultihashAlgorithm<Code extends number = number> {
   readonly name: string;
   readonly code: Code;
-  hash(input: stream.Readable): Promise<Uint8Array>;
+  hashFile(file: fs.PathLike): Promise<Uint8Array>;
 }
-
-export const hash = async <Code extends number>(
-  input: stream.Readable,
-  algorithm: MultihashAlgorithm<Code>
-): Promise<MultihashDigest<Code>> => {
-  const digest = await algorithm.hash(input);
-  return multihash.create(algorithm.code, digest);
-};
 
 export const hashFile = async <Code extends number>(
   file: fs.PathLike,
   algorithm: MultihashAlgorithm<Code>
 ): Promise<MultihashDigest<Code>> => {
-  const fileStream = fs.createReadStream(file);
-  return hash(fileStream, algorithm);
+  const digest = await algorithm.hashFile(file);
+  return multihash.create(algorithm.code, digest);
 };
-
-// A `MultihashAlgorithm` implemented using Node's `crypto` module.
-class NodeMultihashAlgorithm<Code extends number>
-  implements MultihashAlgorithm<Code>
-{
-  readonly name: string;
-  readonly code: Code;
-  private readonly opensslAlgorithm: string;
-
-  constructor(name: string, code: Code, opensslAlgorithm: string) {
-    this.name = name;
-    this.code = code;
-    this.opensslAlgorithm = opensslAlgorithm;
-  }
-
-  async hash(input: stream.Readable): Promise<Uint8Array> {
-    const hasher = crypto.createHash(this.opensslAlgorithm);
-    await stream.promises.pipeline(input, hasher);
-    hasher.end();
-    return hasher.digest();
-  }
-}
 
 const invalidCodeError = (code: number): Error =>
   new Error(
@@ -100,8 +70,30 @@ export const decodeMultihash = (hex: string): MultihashDigest =>
 export const debugPrintDigest = (digest: MultihashDigest): string =>
   `${algorithmName(digest.code)}:${Buffer.from(digest.digest).toString("hex")}`;
 
+// A `MultihashAlgorithm` implemented using Node's `crypto` module.
+class HashaMultihashAlgorithm<Code extends number>
+  implements MultihashAlgorithm<Code>
+{
+  readonly name: string;
+  readonly code: Code;
+  private readonly opensslAlgorithm: string;
+
+  constructor(name: string, code: Code, opensslAlgorithm: string) {
+    this.name = name;
+    this.code = code;
+    this.opensslAlgorithm = opensslAlgorithm;
+  }
+
+  hashFile(file: fs.PathLike): Promise<Uint8Array> {
+    return hasha.fromFile(file.toString(), {
+      algorithm: this.opensslAlgorithm,
+      encoding: "buffer",
+    });
+  }
+}
+
 export const blake2b512: MultihashAlgorithm<MultihashCodes["blake2b512"]> =
-  new NodeMultihashAlgorithm(
+  new HashaMultihashAlgorithm(
     "blake2b-512",
     multihashCodes.blake2b512,
     "blake2b512"
