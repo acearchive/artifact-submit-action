@@ -422,7 +422,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const path_1 = __importDefault(__nccwpck_require__(71017));
 const promises_1 = __importDefault(__nccwpck_require__(73292));
-const submissionFileExt = "json";
+const submissionFileExt = ".json";
 const listSubmissionFiles = (repoPath, submissionPath) => __awaiter(void 0, void 0, void 0, function* () {
     const entries = yield promises_1.default.readdir(path_1.default.join(repoPath, submissionPath), {
         withFileTypes: true,
