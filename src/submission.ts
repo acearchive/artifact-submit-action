@@ -52,13 +52,13 @@ export const toApi = (input: ArtifactSubmission, params: Params): Artifact => ({
 
     return {
       name: fileInput.name,
-      fileName: fileInput.name,
+      fileName: fileInput.fileName,
       mediaType: fileInput.mediaType,
       hash: Buffer.from(multihash.digest).toString("hex"),
       hashAlgorithm: algorithmName(multihash.code),
       url: new URL(
         // We need URL paths use forward slashes, even on Windows.
-        path.posix.join(input.slug, fileInput.multihash),
+        path.posix.join("artifacts", input.slug, fileInput.fileName),
         params.baseUrl
       ).toString(),
     };
