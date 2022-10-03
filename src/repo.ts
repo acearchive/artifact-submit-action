@@ -8,19 +8,18 @@ const listSubmissionFiles = async (
   repoPath: string,
   submissionPath: string
 ): Promise<ReadonlyArray<string>> => {
-  const entries = await fsPromises.readdir(
-    path.join(repoPath, submissionPath),
-    {
-      withFileTypes: true,
-    }
-  );
+  const fullPath = path.join(repoPath, submissionPath);
+
+  const entries = await fsPromises.readdir(fullPath, {
+    withFileTypes: true,
+  });
 
   return entries
     .filter(
       (entry) =>
         entry.isFile() && path.extname(entry.name) === submissionFileExt
     )
-    .map((entry) => entry.name);
+    .map((entry) => path.join(fullPath, entry.name));
 };
 
 const getSubmissions = async (
