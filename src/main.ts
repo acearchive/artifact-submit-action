@@ -3,7 +3,7 @@ import Joi from "joi";
 
 import { getParams } from "./params";
 import { getSubmissions } from "./repo";
-import submissionSchema from "./schema";
+import { schema } from "./schema";
 import { downloadAndVerify } from "./download";
 import { putArtifactMetadata } from "./kv";
 import { debugPrintDigest, decodeMultihash } from "./hash";
@@ -20,7 +20,7 @@ const main = async (): Promise<void> => {
 
   for (const rawSubmission of rawSubmissions) {
     submissions.push(
-      Joi.attempt(rawSubmission, submissionSchema, {
+      Joi.attempt(rawSubmission, schema, {
         abortEarly: false,
         convert: false,
       })

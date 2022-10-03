@@ -1,5 +1,5 @@
 import fetch from "node-fetch";
-import { version as apiVersion, Artifact } from "./api";
+import { Artifact, version } from "./api";
 import { JsonValue } from "./submission";
 
 const putKey = async ({
@@ -43,7 +43,7 @@ export const putArtifactMetadata = async ({
     accountId,
     secretToken,
     namespace,
-    key: `api:v${apiVersion}:artifacts:${artifact.slug}`,
+    key: `artifacts:v${version}:${artifact.slug}`,
     obj: artifact,
   });
 };

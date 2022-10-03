@@ -1,11 +1,11 @@
 import Joi from "joi";
 
-const CurrentVersion = 1;
+export const version = 1;
 
 const decadeFromYear = (year: number): number => year - (year % 10);
 
-export default Joi.object({
-  version: Joi.number().integer().equal(CurrentVersion).required(),
+export const schema = Joi.object({
+  version: Joi.number().integer().equal(version).required(),
   slug: Joi.string()
     .pattern(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/)
     .min(16)
