@@ -53,7 +53,7 @@ const main = async (): Promise<void> => {
       // We can skip files that have already been uploaded to S3.
       if (existingMultihashes.has(fileSubmission.multihash)) {
         core.info(
-          `Skipping artifact file already found in the S3 bucket: ${submission.slug}/${fileSubmission.fileName}`
+          `Skipping artifact file: ${submission.slug}/${fileSubmission.fileName}`
         );
         continue;
       }
