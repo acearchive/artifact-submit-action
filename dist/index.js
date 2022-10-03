@@ -298,7 +298,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             convert: false,
         }));
     }
-    core.info(`All submissions are syntactically valid!`);
+    core.info(`All submissions match the schema!`);
     if (!params.upload)
         return;
     core.info("Starting the upload process...");
@@ -314,7 +314,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         for (const fileSubmission of submission.files) {
             const multihash = (0, hash_1.decodeMultihash)(fileSubmission.multihash);
             // We can skip files that have already been uploaded to S3.
-            if (existingMultihashes.has(multihash)) {
+            if (existingMultihashes.has(fileSubmission.multihash)) {
                 core.info(`Skipping artifact file already found in the S3 bucket: ${submission.slug}/${fileSubmission.fileName}`);
                 continue;
             }
@@ -322,6 +322,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             core.info(`Downloaded file: ${fileSubmission.sourceUrl}`);
             if (downloadResult.isValid) {
                 core.info(`Validated file hash: ${submission.slug}/${fileSubmission.fileName}`);
+                core.info(`Uploading to S3: ${submission.slug}/${fileSubmission.fileName}`);
                 yield (0, s3_1.putArtifactFile)({
                     client: s3Client,
                     bucket: params.s3Bucket,
@@ -522,7 +523,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.listMultihashes = exports.putArtifactFile = exports.newClient = void 0;
 const fs_1 = __importDefault(__nccwpck_require__(57147));
 const client_s3_1 = __nccwpck_require__(19250);
-const hash_1 = __nccwpck_require__(41859);
 const newClient = (params) => {
     var _a;
     return new client_s3_1.S3Client({
@@ -590,8 +590,7 @@ const listMultihashes = ({ client, bucket, prefix, }) => __awaiter(void 0, void 
     const multihashes = new Set();
     const keys = yield listObjectKeys({ client, bucket, prefix });
     for (const key of keys) {
-        const rawMultihash = key.substring(prefix.length);
-        multihashes.add((0, hash_1.decodeMultihash)(rawMultihash));
+        multihashes.add(key.substring(prefix.length));
     }
     return multihashes;
 });
