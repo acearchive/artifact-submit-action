@@ -27,7 +27,7 @@ const main = async (): Promise<void> => {
     );
   }
 
-  core.info(`All submissions are syntactically valid!`);
+  core.info(`All submissions match the schema!`);
 
   if (!params.upload) return;
 
@@ -51,7 +51,7 @@ const main = async (): Promise<void> => {
       const multihash = decodeMultihash(fileSubmission.multihash);
 
       // We can skip files that have already been uploaded to S3.
-      if (existingMultihashes.has(multihash)) {
+      if (existingMultihashes.has(fileSubmission.multihash)) {
         core.info(
           `Skipping artifact file already found in the S3 bucket: ${submission.slug}/${fileSubmission.fileName}`
         );
@@ -68,6 +68,9 @@ const main = async (): Promise<void> => {
       if (downloadResult.isValid) {
         core.info(
           `Validated file hash: ${submission.slug}/${fileSubmission.fileName}`
+        );
+        core.info(
+          `Uploading to S3: ${submission.slug}/${fileSubmission.fileName}`
         );
 
         await putArtifactFile({

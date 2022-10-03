@@ -115,13 +115,12 @@ export const listMultihashes = async ({
   client: S3Client;
   bucket: string;
   prefix: string;
-}): Promise<Set<MultihashDigest>> => {
-  const multihashes = new Set<MultihashDigest>();
+}): Promise<Set<string>> => {
+  const multihashes = new Set<string>();
 
   const keys = await listObjectKeys({ client, bucket, prefix });
   for (const key of keys) {
-    const rawMultihash = key.substring(prefix.length);
-    multihashes.add(decodeMultihash(rawMultihash));
+    multihashes.add(key.substring(prefix.length));
   }
 
   return multihashes;
