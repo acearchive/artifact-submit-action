@@ -2,6 +2,8 @@ import Joi from "joi";
 
 const CurrentVersion = 1;
 
+const decadeFromYear = (year: number): number => year - (year % 10);
+
 export default Joi.object({
   version: Joi.number().integer().equal(CurrentVersion).required(),
   slug: Joi.string()
@@ -65,9 +67,14 @@ export default Joi.object({
     .items(
       Joi.number()
         .integer()
-        .min(Joi.ref("fromYear"))
-        .max(Joi.ref("toYear"))
         .multiple(10)
+        .equal(Joi.ref("fromYear", { adjust: decadeFromYear }))
+        .required(),
+      Joi.number()
+        .integer()
+        .multiple(10)
+        .min(Joi.ref("fromYear", { adjust: decadeFromYear }))
+        .max(Joi.ref("toYear", { adjust: decadeFromYear }))
     )
     .default([]),
   aliases: Joi.array().unique().items(Joi.link("/slug")).default([]),
