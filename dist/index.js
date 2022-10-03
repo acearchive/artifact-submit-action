@@ -612,11 +612,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.schema = exports.version = void 0;
 const joi_1 = __importDefault(__nccwpck_require__(20918));
 exports.version = 1;
+const urlSlugPattern = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
+const fileNamePattern = /^[a-z0-9][a-z0-9-]*[a-z0-9](\/[a-z0-9][a-z0-9-]*[a-z0-9])*(\.[a-z0-9]+)*$/;
+const mediaTypePattern = /^(application|audio|font|image|model|text|video|message|multipart)\/[\w\d.+-]+$/;
 const decadeFromYear = (year) => year - (year % 10);
 exports.schema = joi_1.default.object({
     version: joi_1.default.number().integer().equal(exports.version).required(),
     slug: joi_1.default.string()
-        .pattern(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/)
+        .pattern(urlSlugPattern)
         .min(16)
         .max(64)
         .empty("")
@@ -626,23 +629,24 @@ exports.schema = joi_1.default.object({
     description: joi_1.default.string().trim().max(1000).empty(""),
     files: joi_1.default.array()
         .unique((a, b) => a.fileName === b.fileName ||
-        // If two files have the same URL but different hashes, something weird
-        // is going on.
+        // If two files have the same URL but different hashes, they can't both
+        // be valid.
         (a.sourceUrl === b.sourceUrl && a.multihash !== b.multihash))
         .items(joi_1.default.object({
-        name: joi_1.default.string().max(100).empty("").required(),
-        fileName: joi_1.default.string()
-            .pattern(/^[a-z0-9][a-z0-9-]*[a-z0-9](\/[a-z0-9][a-z0-9-]*[a-z0-9])*(\.[a-z0-9]+)*$/)
-            .empty("")
-            .required(),
-        mediaType: joi_1.default.string()
-            .pattern(/^(application|audio|font|image|model|text|video|message|multipart)\/[\w\d.+-]+$/)
-            .empty(""),
+        name: joi_1.default.string().max(256).empty("").required(),
+        fileName: joi_1.default.string().pattern(fileNamePattern).empty("").required(),
+        mediaType: joi_1.default.string().pattern(mediaTypePattern).empty(""),
         multihash: joi_1.default.string().hex().empty("").required(),
         sourceUrl: joi_1.default.string()
+            // We allow HTTP URLs for importing only because we're validating their checksums
+            // anyways.
             .uri({ scheme: ["http", "https"] })
             .empty("")
             .required(),
+        aliases: joi_1.default.array()
+            .unique()
+            .items(joi_1.default.string().pattern(fileNamePattern).empty(""))
+            .default([]),
     }))
         .default([]),
     links: joi_1.default.array()
@@ -699,13 +703,14 @@ const toApi = (input, params) => ({
         const multihash = (0, hash_1.decodeMultihash)(fileInput.multihash);
         return {
             name: fileInput.name,
-            fileName: fileInput.name,
+            fileName: fileInput.fileName,
             mediaType: fileInput.mediaType,
             hash: Buffer.from(multihash.digest).toString("hex"),
             hashAlgorithm: (0, hash_1.algorithmName)(multihash.code),
             url: new URL(
             // We need URL paths use forward slashes, even on Windows.
-            path_1.default.posix.join(input.slug, fileInput.multihash), params.baseUrl).toString(),
+            path_1.default.posix.join("artifacts", input.slug, fileInput.fileName), params.baseUrl).toString(),
+            aliases: fileInput.aliases,
         };
     }),
     links: input.links.map((linkInput) => ({
