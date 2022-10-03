@@ -2,7 +2,7 @@ import fs from "fs";
 import crypto from "crypto";
 import stream from "stream";
 
-import multihash from "multiformats/hashes/digest";
+import * as multihash from "multiformats/hashes/digest";
 import { MultihashDigest } from "multiformats/hashes/interface";
 
 // Definitions for multihash algorithms can be found here:

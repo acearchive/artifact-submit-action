@@ -3,7 +3,7 @@ import afs from "fs/promises";
 import path from "path";
 import stream from "stream/promises";
 
-import contentType from "content-type";
+import * as contentType from "content-type";
 import fetch from "node-fetch";
 import { MultihashDigest } from "multiformats/hashes/interface";
 import { equals as digestEquals } from "multiformats/hashes/digest";
