@@ -119,9 +119,9 @@ export const listMultihashes = async ({
   const multihashes = new Set<MultihashDigest>();
 
   const keys = await listObjectKeys({ client, bucket, prefix });
-
   for (const key of keys) {
-    multihashes.add(decodeMultihash(key));
+    const rawMultihash = key.substring(prefix.length);
+    multihashes.add(decodeMultihash(rawMultihash));
   }
 
   return multihashes;

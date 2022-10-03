@@ -1,5 +1,4 @@
 import fs from "fs";
-import stream from "stream";
 
 import hasha from "hasha";
 import * as multihash from "multiformats/hashes/digest";
