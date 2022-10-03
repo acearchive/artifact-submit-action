@@ -566,6 +566,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const joi_1 = __importDefault(__nccwpck_require__(20918));
 const CurrentVersion = 1;
+const decadeFromYear = (year) => year - (year % 10);
 exports["default"] = joi_1.default.object({
     version: joi_1.default.number().integer().equal(CurrentVersion).required(),
     slug: joi_1.default.string()
@@ -617,9 +618,13 @@ exports["default"] = joi_1.default.object({
         .sort({ order: "ascending" })
         .items(joi_1.default.number()
         .integer()
-        .min(joi_1.default.ref("fromYear"))
-        .max(joi_1.default.ref("toYear"))
-        .multiple(10))
+        .multiple(10)
+        .equal(joi_1.default.ref("fromYear", { adjust: decadeFromYear }))
+        .required(), joi_1.default.number()
+        .integer()
+        .multiple(10)
+        .min(joi_1.default.ref("fromYear", { adjust: decadeFromYear }))
+        .max(joi_1.default.ref("toYear", { adjust: decadeFromYear })))
         .default([]),
     aliases: joi_1.default.array().unique().items(joi_1.default.link("/slug")).default([]),
 });
