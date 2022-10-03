@@ -424,12 +424,13 @@ const path_1 = __importDefault(__nccwpck_require__(71017));
 const promises_1 = __importDefault(__nccwpck_require__(73292));
 const submissionFileExt = ".json";
 const listSubmissionFiles = (repoPath, submissionPath) => __awaiter(void 0, void 0, void 0, function* () {
-    const entries = yield promises_1.default.readdir(path_1.default.join(repoPath, submissionPath), {
+    const fullPath = path_1.default.join(repoPath, submissionPath);
+    const entries = yield promises_1.default.readdir(fullPath, {
         withFileTypes: true,
     });
     return entries
         .filter((entry) => entry.isFile() && path_1.default.extname(entry.name) === submissionFileExt)
-        .map((entry) => entry.name);
+        .map((entry) => path_1.default.join(fullPath, entry.name));
 });
 const getSubmissions = (repoPath, submissionPath) => __awaiter(void 0, void 0, void 0, function* () {
     const fileNames = yield listSubmissionFiles(repoPath, submissionPath);
