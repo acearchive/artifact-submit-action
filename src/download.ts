@@ -1,19 +1,22 @@
 import fs from "fs";
-import afs from "fs/promises";
+import fsPromises from "fs/promises";
+import os from "os";
 import path from "path";
 import stream from "stream/promises";
 
 import * as contentType from "content-type";
-import fetch from "node-fetch";
-import { MultihashDigest } from "multiformats/hashes/interface";
 import { equals as digestEquals } from "multiformats/hashes/digest";
+import { MultihashDigest } from "multiformats/hashes/interface";
+import fetch from "node-fetch";
 
 import { algorithmByCode, hashFile } from "./hash";
 
 const downloadFile = async (
   url: URL
 ): Promise<{ path: fs.PathLike; mediaType?: string }> => {
-  const tempDirPath = await afs.mkdtemp("artifact-submit-action-");
+  const tempDirPath = await fsPromises.mkdtemp(
+    path.join(os.tmpdir(), "artifact-submit-action-")
+  );
   const tempFile = fs.createWriteStream(path.join(tempDirPath, "file"));
 
   const response = await fetch(url.toString());
