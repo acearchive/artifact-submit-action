@@ -22,7 +22,7 @@ const listSubmissionFiles = async (
     .map((entry) => path.join(fullPath, entry.name));
 };
 
-const getSubmissions = async (
+export const getSubmissions = async (
   repoPath: string,
   submissionPath: string
 ): Promise<ReadonlyArray<JsonObject>> => {
@@ -43,5 +43,3 @@ const getSubmissions = async (
 
   return submissions;
 };
-
-export default getSubmissions;

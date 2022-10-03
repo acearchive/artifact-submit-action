@@ -35,7 +35,7 @@ const schema = Joi.object({
   kvNamespaceId: Joi.string().required().label("kv_namespace_id"),
 });
 
-export default (): Params => {
+export const getParams = (): Params => {
   const s3AccessKeyId = core.getInput("s3_access_key_id", { required: true });
   const s3SecretAccessKey = core.getInput("s3_secret_access_key", {
     required: true,

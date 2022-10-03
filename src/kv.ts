@@ -28,7 +28,7 @@ const putKey = async ({
   );
 };
 
-const putArtifactMetadata = async ({
+export const putArtifactMetadata = async ({
   accountId,
   secretToken,
   namespace,
@@ -47,5 +47,3 @@ const putArtifactMetadata = async ({
     obj: artifact,
   });
 };
-
-export default putArtifactMetadata;

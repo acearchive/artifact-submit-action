@@ -1,11 +1,11 @@
 import * as core from "@actions/core";
 import Joi from "joi";
 
-import getParams from "./params";
-import getSubmissions from "./repo";
+import { getParams } from "./params";
+import { getSubmissions } from "./repo";
 import submissionSchema from "./schema";
-import downloadAndVerify from "./download";
-import putArtifactMetadata from "./kv";
+import { downloadAndVerify } from "./download";
+import { putArtifactMetadata } from "./kv";
 import { debugPrintDigest, decodeMultihash } from "./hash";
 import { listMultihashes, newClient, putArtifactFile } from "./s3";
 import { ArtifactSubmission, toApi } from "./submission";

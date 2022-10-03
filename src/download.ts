@@ -45,7 +45,7 @@ export type FileValidationFail = Readonly<{
 
 export type FileValidationResult = FileValidationSuccess | FileValidationFail;
 
-export default async (
+export const downloadAndVerify = async (
   url: URL,
   expectedDigest: MultihashDigest
 ): Promise<FileValidationResult> => {
