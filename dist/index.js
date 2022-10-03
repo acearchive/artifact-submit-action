@@ -54,16 +54,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.downloadAndVerify = void 0;
 const fs_1 = __importDefault(__nccwpck_require__(57147));
 const promises_1 = __importDefault(__nccwpck_require__(73292));
+const os_1 = __importDefault(__nccwpck_require__(22037));
 const path_1 = __importDefault(__nccwpck_require__(71017));
 const promises_2 = __importDefault(__nccwpck_require__(74845));
 const contentType = __importStar(__nccwpck_require__(99915));
-const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
 const digest_1 = __nccwpck_require__(20076);
+const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
 const hash_1 = __nccwpck_require__(41859);
 const downloadFile = (url) => __awaiter(void 0, void 0, void 0, function* () {
-    const tempDirPath = yield promises_1.default.mkdtemp("artifact-submit-action-");
+    const tempDirPath = yield promises_1.default.mkdtemp(path_1.default.join(os_1.default.tmpdir(), "artifact-submit-action-"));
     const tempFile = fs_1.default.createWriteStream(path_1.default.join(tempDirPath, "file"));
     const response = yield (0, node_fetch_1.default)(url.toString());
     if (response.body !== null) {
@@ -77,7 +79,7 @@ const downloadFile = (url) => __awaiter(void 0, void 0, void 0, function* () {
             : contentType.parse(responseContentType).type,
     };
 });
-exports["default"] = (url, expectedDigest) => __awaiter(void 0, void 0, void 0, function* () {
+const downloadAndVerify = (url, expectedDigest) => __awaiter(void 0, void 0, void 0, function* () {
     const downloadedFile = yield downloadFile(url);
     const actualDigest = yield (0, hash_1.hashFile)(downloadedFile.path, (0, hash_1.algorithmByCode)(expectedDigest.code));
     if (!(0, digest_1.equals)(actualDigest, expectedDigest)) {
@@ -91,6 +93,7 @@ exports["default"] = (url, expectedDigest) => __awaiter(void 0, void 0, void 0, 
         path: downloadedFile.path,
     };
 });
+exports.downloadAndVerify = downloadAndVerify;
 
 
 /***/ }),
@@ -136,37 +139,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.blake2b512 = exports.debugPrintDigest = exports.decodeMultihash = exports.algorithmName = exports.isSupportedDigest = exports.isSupportedAlgorithm = exports.algorithmByCode = exports.hashFile = exports.hash = void 0;
-const fs_1 = __importDefault(__nccwpck_require__(57147));
-const crypto_1 = __importDefault(__nccwpck_require__(6113));
-const stream_1 = __importDefault(__nccwpck_require__(12781));
+exports.blake2b512 = exports.debugPrintDigest = exports.decodeMultihash = exports.algorithmName = exports.isSupportedDigest = exports.isSupportedAlgorithm = exports.algorithmByCode = exports.hashFile = void 0;
+const hasha_1 = __importDefault(__nccwpck_require__(44933));
 const multihash = __importStar(__nccwpck_require__(20076));
-const hash = (input, algorithm) => __awaiter(void 0, void 0, void 0, function* () {
-    const digest = yield algorithm.hash(input);
+const hashFile = (file, algorithm) => __awaiter(void 0, void 0, void 0, function* () {
+    const digest = yield algorithm.hashFile(file);
     return multihash.create(algorithm.code, digest);
 });
-exports.hash = hash;
-const hashFile = (file, algorithm) => __awaiter(void 0, void 0, void 0, function* () {
-    const fileStream = fs_1.default.createReadStream(file);
-    return (0, exports.hash)(fileStream, algorithm);
-});
 exports.hashFile = hashFile;
-// A `MultihashAlgorithm` implemented using Node's `crypto` module.
-class NodeMultihashAlgorithm {
-    constructor(name, code, opensslAlgorithm) {
-        this.name = name;
-        this.code = code;
-        this.opensslAlgorithm = opensslAlgorithm;
-    }
-    hash(input) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const hasher = crypto_1.default.createHash(this.opensslAlgorithm);
-            yield stream_1.default.promises.pipeline(input, hasher);
-            hasher.end();
-            return hasher.digest();
-        });
-    }
-}
 const invalidCodeError = (code) => new Error(`A hash algorithm with the multihash code 0x${code.toString(16)} is not supported.\nFor more information, see this repo: https://github.com/multiformats/multicodec`);
 const multihashCodes = {
     blake2b512: 0xb240,
@@ -192,7 +172,21 @@ const decodeMultihash = (hex) => multihash.decode(Buffer.from(hex, "hex"));
 exports.decodeMultihash = decodeMultihash;
 const debugPrintDigest = (digest) => `${(0, exports.algorithmName)(digest.code)}:${Buffer.from(digest.digest).toString("hex")}`;
 exports.debugPrintDigest = debugPrintDigest;
-exports.blake2b512 = new NodeMultihashAlgorithm("blake2b-512", multihashCodes.blake2b512, "blake2b512");
+// A `MultihashAlgorithm` implemented using Node's `crypto` module.
+class HashaMultihashAlgorithm {
+    constructor(name, code, opensslAlgorithm) {
+        this.name = name;
+        this.code = code;
+        this.opensslAlgorithm = opensslAlgorithm;
+    }
+    hashFile(file) {
+        return hasha_1.default.fromFile(file.toString(), {
+            algorithm: this.opensslAlgorithm,
+            encoding: "buffer",
+        });
+    }
+}
+exports.blake2b512 = new HashaMultihashAlgorithm("blake2b-512", multihashCodes.blake2b512, "blake2b512");
 
 
 /***/ }),
@@ -215,6 +209,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.putArtifactMetadata = void 0;
 const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
 const api_1 = __nccwpck_require__(88947);
 const putKey = ({ accountId, secretToken, namespace, key, obj, }) => __awaiter(void 0, void 0, void 0, function* () {
@@ -236,7 +231,7 @@ const putArtifactMetadata = ({ accountId, secretToken, namespace, artifact, }) =
         obj: artifact,
     });
 });
-exports["default"] = putArtifactMetadata;
+exports.putArtifactMetadata = putArtifactMetadata;
 
 
 /***/ }),
@@ -284,17 +279,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(42186));
 const joi_1 = __importDefault(__nccwpck_require__(20918));
-const params_1 = __importDefault(__nccwpck_require__(62017));
-const repo_1 = __importDefault(__nccwpck_require__(58139));
+const params_1 = __nccwpck_require__(62017);
+const repo_1 = __nccwpck_require__(58139);
 const schema_1 = __importDefault(__nccwpck_require__(5171));
-const download_1 = __importDefault(__nccwpck_require__(95933));
-const kv_1 = __importDefault(__nccwpck_require__(18116));
+const download_1 = __nccwpck_require__(95933);
+const kv_1 = __nccwpck_require__(18116);
 const hash_1 = __nccwpck_require__(41859);
 const s3_1 = __nccwpck_require__(81863);
 const submission_1 = __nccwpck_require__(16307);
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
-    const params = (0, params_1.default)();
-    const rawSubmissions = yield (0, repo_1.default)(params.repo, params.path);
+    const params = (0, params_1.getParams)();
+    const rawSubmissions = yield (0, repo_1.getSubmissions)(params.repo, params.path);
     core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
     const submissions = new Array();
     for (const rawSubmission of rawSubmissions) {
@@ -323,7 +318,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
                 core.info(`Skipping artifact file already found in the S3 bucket: ${submission.slug}/${fileSubmission.fileName}`);
                 continue;
             }
-            const downloadResult = yield (0, download_1.default)(fileSubmission.sourceUrl, multihash);
+            const downloadResult = yield (0, download_1.downloadAndVerify)(fileSubmission.sourceUrl, multihash);
             core.info(`Downloaded file: ${fileSubmission.sourceUrl}`);
             if (downloadResult.isValid) {
                 core.info(`Validated file hash: ${submission.slug}/${fileSubmission.fileName}`);
@@ -341,7 +336,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
                 throw new Error(`Downloaded file does not match the hash included in the submission: ${submission.slug}/${fileSubmission.fileName}\nURL: ${fileSubmission.sourceUrl}\nExpected: ${(0, hash_1.debugPrintDigest)(multihash)}\nActual: ${(0, hash_1.debugPrintDigest)(downloadResult.actualDigest)}`);
             }
         }
-        yield (0, kv_1.default)({
+        yield (0, kv_1.putArtifactMetadata)({
             accountId: params.cloudflareAccountId,
             secretToken: params.cloudflareApiToken,
             namespace: params.kvNamespaceId,
@@ -397,6 +392,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getParams = void 0;
 const joi_1 = __importDefault(__nccwpck_require__(20918));
 const core = __importStar(__nccwpck_require__(42186));
 const schema = joi_1.default.object({
@@ -414,7 +410,7 @@ const schema = joi_1.default.object({
     cloudflareApiToken: joi_1.default.string().required().label("cloudflare_api_token"),
     kvNamespaceId: joi_1.default.string().required().label("kv_namespace_id"),
 });
-exports["default"] = () => {
+const getParams = () => {
     const s3AccessKeyId = core.getInput("s3_access_key_id", { required: true });
     const s3SecretAccessKey = core.getInput("s3_secret_access_key", {
         required: true,
@@ -444,6 +440,7 @@ exports["default"] = () => {
         kvNamespaceId: core.getInput("kv_namespace_id", { required: true }),
     }, schema, { abortEarly: false });
 };
+exports.getParams = getParams;
 
 
 /***/ }),
@@ -466,6 +463,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getSubmissions = void 0;
 const path_1 = __importDefault(__nccwpck_require__(71017));
 const promises_1 = __importDefault(__nccwpck_require__(73292));
 const submissionFileExt = ".json";
@@ -491,7 +489,7 @@ const getSubmissions = (repoPath, submissionPath) => __awaiter(void 0, void 0, v
     }
     return submissions;
 });
-exports["default"] = getSubmissions;
+exports.getSubmissions = getSubmissions;
 
 
 /***/ }),
@@ -53369,6 +53367,200 @@ function findClosingIndex(xmlData, str, i, errMsg){
 }
 
 exports.getTraversalObj = getTraversalObj;
+
+
+/***/ }),
+
+/***/ 44933:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+const fs = __nccwpck_require__(57147);
+const path = __nccwpck_require__(71017);
+const crypto = __nccwpck_require__(6113);
+const isStream = __nccwpck_require__(41554);
+
+const {Worker} = (() => {
+	try {
+		return __nccwpck_require__(71267);
+	} catch (_) {
+		return {};
+	}
+})();
+
+let worker; // Lazy
+let taskIdCounter = 0;
+const tasks = new Map();
+
+const recreateWorkerError = sourceError => {
+	const error = new Error(sourceError.message);
+
+	for (const [key, value] of Object.entries(sourceError)) {
+		if (key !== 'message') {
+			error[key] = value;
+		}
+	}
+
+	return error;
+};
+
+const createWorker = () => {
+	worker = new Worker(__nccwpck_require__.ab + "thread.js");
+
+	worker.on('message', message => {
+		const task = tasks.get(message.id);
+		tasks.delete(message.id);
+
+		if (tasks.size === 0) {
+			worker.unref();
+		}
+
+		if (message.error === undefined) {
+			task.resolve(message.value);
+		} else {
+			task.reject(recreateWorkerError(message.error));
+		}
+	});
+
+	worker.on('error', error => {
+		// Any error here is effectively an equivalent of segfault, and have no scope, so we just throw it on callback level
+		throw error;
+	});
+};
+
+const taskWorker = (method, args, transferList) => new Promise((resolve, reject) => {
+	const id = taskIdCounter++;
+	tasks.set(id, {resolve, reject});
+
+	if (worker === undefined) {
+		createWorker();
+	}
+
+	worker.ref();
+	worker.postMessage({id, method, args}, transferList);
+});
+
+const hasha = (input, options = {}) => {
+	let outputEncoding = options.encoding || 'hex';
+
+	if (outputEncoding === 'buffer') {
+		outputEncoding = undefined;
+	}
+
+	const hash = crypto.createHash(options.algorithm || 'sha512');
+
+	const update = buffer => {
+		const inputEncoding = typeof buffer === 'string' ? 'utf8' : undefined;
+		hash.update(buffer, inputEncoding);
+	};
+
+	if (Array.isArray(input)) {
+		input.forEach(update);
+	} else {
+		update(input);
+	}
+
+	return hash.digest(outputEncoding);
+};
+
+hasha.stream = (options = {}) => {
+	let outputEncoding = options.encoding || 'hex';
+
+	if (outputEncoding === 'buffer') {
+		outputEncoding = undefined;
+	}
+
+	const stream = crypto.createHash(options.algorithm || 'sha512');
+	stream.setEncoding(outputEncoding);
+	return stream;
+};
+
+hasha.fromStream = async (stream, options = {}) => {
+	if (!isStream(stream)) {
+		throw new TypeError('Expected a stream');
+	}
+
+	return new Promise((resolve, reject) => {
+		// TODO: Use `stream.pipeline` and `stream.finished` when targeting Node.js 10
+		stream
+			.on('error', reject)
+			.pipe(hasha.stream(options))
+			.on('error', reject)
+			.on('finish', function () {
+				resolve(this.read());
+			});
+	});
+};
+
+if (Worker === undefined) {
+	hasha.fromFile = async (filePath, options) => hasha.fromStream(fs.createReadStream(filePath), options);
+	hasha.async = async (input, options) => hasha(input, options);
+} else {
+	hasha.fromFile = async (filePath, {algorithm = 'sha512', encoding = 'hex'} = {}) => {
+		const hash = await taskWorker('hashFile', [algorithm, filePath]);
+
+		if (encoding === 'buffer') {
+			return Buffer.from(hash);
+		}
+
+		return Buffer.from(hash).toString(encoding);
+	};
+
+	hasha.async = async (input, {algorithm = 'sha512', encoding = 'hex'} = {}) => {
+		if (encoding === 'buffer') {
+			encoding = undefined;
+		}
+
+		const hash = await taskWorker('hash', [algorithm, input]);
+
+		if (encoding === undefined) {
+			return Buffer.from(hash);
+		}
+
+		return Buffer.from(hash).toString(encoding);
+	};
+}
+
+hasha.fromFileSync = (filePath, options) => hasha(fs.readFileSync(filePath), options);
+
+module.exports = hasha;
+
+
+/***/ }),
+
+/***/ 41554:
+/***/ ((module) => {
+
+"use strict";
+
+
+const isStream = stream =>
+	stream !== null &&
+	typeof stream === 'object' &&
+	typeof stream.pipe === 'function';
+
+isStream.writable = stream =>
+	isStream(stream) &&
+	stream.writable !== false &&
+	typeof stream._write === 'function' &&
+	typeof stream._writableState === 'object';
+
+isStream.readable = stream =>
+	isStream(stream) &&
+	stream.readable !== false &&
+	typeof stream._read === 'function' &&
+	typeof stream._readableState === 'object';
+
+isStream.duplex = stream =>
+	isStream.writable(stream) &&
+	isStream.readable(stream);
+
+isStream.transform = stream =>
+	isStream.duplex(stream) &&
+	typeof stream._transform === 'function';
+
+module.exports = isStream;
 
 
 /***/ }),
