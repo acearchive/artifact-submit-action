@@ -590,7 +590,8 @@ const listMultihashes = ({ client, bucket, prefix, }) => __awaiter(void 0, void 
     const multihashes = new Set();
     const keys = yield listObjectKeys({ client, bucket, prefix });
     for (const key of keys) {
-        multihashes.add((0, hash_1.decodeMultihash)(key));
+        const rawMultihash = key.substring(prefix.length);
+        multihashes.add((0, hash_1.decodeMultihash)(rawMultihash));
     }
     return multihashes;
 });
