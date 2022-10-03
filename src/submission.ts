@@ -19,6 +19,7 @@ export type ArtifactFileSubmission = Readonly<{
   mediaType?: string;
   multihash: string;
   sourceUrl: URL;
+  aliases: ReadonlyArray<string>;
 }>;
 
 export type ArtifactLinkSubmission = Readonly<{
@@ -61,6 +62,7 @@ export const toApi = (input: ArtifactSubmission, params: Params): Artifact => ({
         path.posix.join("artifacts", input.slug, fileInput.fileName),
         params.baseUrl
       ).toString(),
+      aliases: fileInput.aliases,
     };
   }),
   links: input.links.map((linkInput) => ({
