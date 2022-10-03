@@ -200,6 +200,29 @@ exports["default"] = putArtifactMetadata;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -213,7 +236,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core_1 = __importDefault(__nccwpck_require__(42186));
+const core = __importStar(__nccwpck_require__(42186));
 const joi_1 = __importDefault(__nccwpck_require__(20918));
 const params_1 = __importDefault(__nccwpck_require__(62017));
 const repo_1 = __importDefault(__nccwpck_require__(58139));
@@ -226,7 +249,7 @@ const submission_1 = __nccwpck_require__(16307);
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const params = (0, params_1.default)();
     const rawSubmissions = yield (0, repo_1.default)(params.repo, params.path);
-    core_1.default.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
+    core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
     const submissions = new Array(rawSubmissions.length);
     for (const rawSubmission of rawSubmissions) {
         submissions.push(joi_1.default.attempt(rawSubmission, schema_1.default, {
@@ -234,30 +257,30 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             convert: false,
         }));
     }
-    core_1.default.info(`All submissions are syntactically valid!`);
+    core.info(`All submissions are syntactically valid!`);
     if (!params.upload)
         return;
-    core_1.default.info("Starting the upload process...");
+    core.info("Starting the upload process...");
     const s3Client = (0, s3_1.newClient)(params);
     const existingMultihashes = yield (0, s3_1.listMultihashes)({
         client: s3Client,
         bucket: params.s3Bucket,
         prefix: params.s3Prefix,
     });
-    core_1.default.info(`Found ${existingMultihashes.size} artifact files in the S3 bucket.`);
+    core.info(`Found ${existingMultihashes.size} artifact files in the S3 bucket.`);
     let filesUploaded = 0;
     for (const submission of submissions) {
         for (const fileSubmission of submission.files) {
             const multihash = (0, hash_1.decodeMultihash)(fileSubmission.multihash);
             // We can skip files that have already been uploaded to S3.
             if (existingMultihashes.has(multihash)) {
-                core_1.default.info(`Skipping artifact file already found in the S3 bucket: ${submission.slug}/${fileSubmission.fileName}`);
+                core.info(`Skipping artifact file already found in the S3 bucket: ${submission.slug}/${fileSubmission.fileName}`);
                 continue;
             }
             const downloadResult = yield (0, download_1.default)(fileSubmission.sourceUrl, multihash);
-            core_1.default.info(`Downloaded file: ${fileSubmission.sourceUrl}`);
+            core.info(`Downloaded file: ${fileSubmission.sourceUrl}`);
             if (downloadResult.isValid) {
-                core_1.default.info(`Validated file hash: ${submission.slug}/${fileSubmission.fileName}`);
+                core.info(`Validated file hash: ${submission.slug}/${fileSubmission.fileName}`);
                 yield (0, s3_1.putArtifactFile)({
                     client: s3Client,
                     bucket: params.s3Bucket,
@@ -278,9 +301,9 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             namespace: params.kvNamespaceId,
             artifact: (0, submission_1.toApi)(submission, params),
         });
-        core_1.default.info(`Wrote artifact metadata: ${submission.slug}`);
+        core.info(`Wrote artifact metadata: ${submission.slug}`);
     }
-    core_1.default.info(`Uploaded ${filesUploaded} files to S3.`);
+    core.info(`Uploaded ${filesUploaded} files to S3.`);
 });
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -288,7 +311,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     }
     catch (e) {
         if (e instanceof Error)
-            core_1.default.setFailed(e.message);
+            core.setFailed(e.message);
     }
 });
 run();
