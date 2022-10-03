@@ -68,13 +68,13 @@ export default Joi.object({
       Joi.number()
         .integer()
         .multiple(10)
-        .equal(Joi.ref("fromYear", { adjust: decadeFromYear }))
+        .equal(Joi.ref("...fromYear", { adjust: decadeFromYear }))
         .required(),
       Joi.number()
         .integer()
         .multiple(10)
-        .min(Joi.ref("fromYear", { adjust: decadeFromYear }))
-        .max(Joi.ref("toYear", { adjust: decadeFromYear }))
+        .min(Joi.ref("...fromYear", { adjust: decadeFromYear }))
+        .max(Joi.ref("...toYear", { adjust: decadeFromYear }))
     )
     .default([]),
   aliases: Joi.array().unique().items(Joi.link("/slug")).default([]),
