@@ -2,7 +2,7 @@ import path from "path";
 import fsPromises from "fs/promises";
 import { JsonObject } from "./submission";
 
-const submissionFileExt = "json";
+const submissionFileExt = ".json";
 
 const listSubmissionFiles = async (
   repoPath: string,
