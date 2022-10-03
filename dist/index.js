@@ -619,12 +619,12 @@ exports["default"] = joi_1.default.object({
         .items(joi_1.default.number()
         .integer()
         .multiple(10)
-        .equal(joi_1.default.ref("fromYear", { adjust: decadeFromYear }))
+        .equal(joi_1.default.ref("...fromYear", { adjust: decadeFromYear }))
         .required(), joi_1.default.number()
         .integer()
         .multiple(10)
-        .min(joi_1.default.ref("fromYear", { adjust: decadeFromYear }))
-        .max(joi_1.default.ref("toYear", { adjust: decadeFromYear })))
+        .min(joi_1.default.ref("...fromYear", { adjust: decadeFromYear }))
+        .max(joi_1.default.ref("...toYear", { adjust: decadeFromYear })))
         .default([]),
     aliases: joi_1.default.array().unique().items(joi_1.default.link("/slug")).default([]),
 });
