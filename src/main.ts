@@ -16,7 +16,7 @@ const main = async (): Promise<void> => {
 
   core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
 
-  const submissions = new Array<ArtifactSubmission>(rawSubmissions.length);
+  const submissions = new Array<ArtifactSubmission>();
 
   for (const rawSubmission of rawSubmissions) {
     submissions.push(
