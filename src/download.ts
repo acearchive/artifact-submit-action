@@ -39,7 +39,6 @@ const downloadFile = async (
 export type FileValidationSuccess = Readonly<{
   isValid: true;
   path: fs.PathLike;
-  mediaType?: string;
 }>;
 
 export type FileValidationFail = Readonly<{
@@ -69,6 +68,5 @@ export const downloadAndVerify = async (
   return {
     isValid: true,
     path: downloadedFile.path,
-    mediaType: downloadedFile.mediaType,
   };
 };
