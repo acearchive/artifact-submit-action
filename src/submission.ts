@@ -16,7 +16,6 @@ export type JsonObject = Readonly<Record<string, JsonValue>>;
 export type ArtifactFileSubmission = Readonly<{
   name: string;
   fileName: string;
-  mediaType?: string;
   multihash: string;
   sourceUrl: URL;
   aliases: ReadonlyArray<string>;
@@ -54,7 +53,6 @@ export const toApi = (input: ArtifactSubmission, params: Params): Artifact => ({
     return {
       name: fileInput.name,
       fileName: fileInput.fileName,
-      mediaType: fileInput.mediaType,
       hash: Buffer.from(multihash.digest).toString("hex"),
       hashAlgorithm: algorithmName(multihash.code),
       url: new URL(

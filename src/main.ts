@@ -79,7 +79,7 @@ const main = async (): Promise<void> => {
           filePath: downloadResult.path,
           multihash,
           prefix: params.s3Prefix,
-          mediaType: fileSubmission.mediaType,
+          mediaType: downloadResult.mediaType,
         });
 
         filesUploaded += 1;

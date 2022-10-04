@@ -5,8 +5,6 @@ export const version = 1;
 const urlSlugPattern = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const fileNamePattern =
   /^[a-z0-9][a-z0-9-]*[a-z0-9](\/[a-z0-9][a-z0-9-]*[a-z0-9])*(\.[a-z0-9]+)*$/;
-const mediaTypePattern =
-  /^(application|audio|font|image|model|text|video|message|multipart)\/[\w\d.+-]+$/;
 
 const decadeFromYear = (year: number): number => year - (year % 10);
 
@@ -33,7 +31,6 @@ export const schema = Joi.object({
       Joi.object({
         name: Joi.string().max(256).empty("").required(),
         fileName: Joi.string().pattern(fileNamePattern).empty("").required(),
-        mediaType: Joi.string().pattern(mediaTypePattern).empty(""),
         multihash: Joi.string().hex().empty("").required(),
         sourceUrl: Joi.string()
           // We allow HTTP URLs for importing only because we're validating their checksums
