@@ -315,7 +315,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             const multihash = (0, hash_1.decodeMultihash)(fileSubmission.multihash);
             // We can skip files that have already been uploaded to S3.
             if (existingMultihashes.has(fileSubmission.multihash)) {
-                core.info(`Skipping artifact file already found in the S3 bucket: ${submission.slug}/${fileSubmission.fileName}`);
+                core.info(`Skipping artifact file: ${submission.slug}/${fileSubmission.fileName}`);
                 continue;
             }
             const downloadResult = yield (0, download_1.downloadAndVerify)(fileSubmission.sourceUrl, multihash);
