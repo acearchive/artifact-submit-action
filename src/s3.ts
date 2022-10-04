@@ -7,7 +7,6 @@ import {
   paginateListObjectsV2,
 } from "@aws-sdk/client-s3";
 import { MultihashDigest } from "multiformats/hashes/interface";
-import { decodeMultihash } from "./hash";
 
 export const newClient = (params: Params): S3Client => {
   return new S3Client({
