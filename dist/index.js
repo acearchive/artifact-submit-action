@@ -91,6 +91,7 @@ const downloadAndVerify = (url, expectedDigest) => __awaiter(void 0, void 0, voi
     return {
         isValid: true,
         path: downloadedFile.path,
+        mediaType: downloadedFile.mediaType,
     };
 });
 exports.downloadAndVerify = downloadAndVerify;
@@ -329,7 +330,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
                     filePath: downloadResult.path,
                     multihash,
                     prefix: params.s3Prefix,
-                    mediaType: fileSubmission.mediaType,
+                    mediaType: downloadResult.mediaType,
                 });
                 filesUploaded += 1;
             }
@@ -613,7 +614,6 @@ const joi_1 = __importDefault(__nccwpck_require__(20918));
 exports.version = 1;
 const urlSlugPattern = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const fileNamePattern = /^[a-z0-9][a-z0-9-]*[a-z0-9](\/[a-z0-9][a-z0-9-]*[a-z0-9])*(\.[a-z0-9]+)*$/;
-const mediaTypePattern = /^(application|audio|font|image|model|text|video|message|multipart)\/[\w\d.+-]+$/;
 const decadeFromYear = (year) => year - (year % 10);
 exports.schema = joi_1.default.object({
     version: joi_1.default.number().integer().equal(exports.version).required(),
@@ -634,7 +634,6 @@ exports.schema = joi_1.default.object({
         .items(joi_1.default.object({
         name: joi_1.default.string().max(256).empty("").required(),
         fileName: joi_1.default.string().pattern(fileNamePattern).empty("").required(),
-        mediaType: joi_1.default.string().pattern(mediaTypePattern).empty(""),
         multihash: joi_1.default.string().hex().empty("").required(),
         sourceUrl: joi_1.default.string()
             // We allow HTTP URLs for importing only because we're validating their checksums
@@ -703,7 +702,6 @@ const toApi = (input, params) => ({
         return {
             name: fileInput.name,
             fileName: fileInput.fileName,
-            mediaType: fileInput.mediaType,
             hash: Buffer.from(multihash.digest).toString("hex"),
             hashAlgorithm: (0, hash_1.algorithmName)(multihash.code),
             url: new URL(
