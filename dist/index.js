@@ -139,7 +139,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.blake2b512 = exports.debugPrintDigest = exports.decodeMultihash = exports.algorithmName = exports.isSupportedDigest = exports.isSupportedAlgorithm = exports.algorithmByCode = exports.hashFile = void 0;
+exports.blake2b512 = exports.debugPrintDigest = exports.encodedHashFromMultihash = exports.encodeMultihash = exports.decodeMultihash = exports.algorithmName = exports.isSupportedDigest = exports.isSupportedAlgorithm = exports.algorithmByCode = exports.hashFile = void 0;
 const hasha_1 = __importDefault(__nccwpck_require__(44933));
 const multihash = __importStar(__nccwpck_require__(20076));
 const hashFile = (file, algorithm) => __awaiter(void 0, void 0, void 0, function* () {
@@ -170,6 +170,10 @@ const algorithmName = (code) => (0, exports.algorithmByCode)(code).name;
 exports.algorithmName = algorithmName;
 const decodeMultihash = (hex) => multihash.decode(Buffer.from(hex, "hex"));
 exports.decodeMultihash = decodeMultihash;
+const encodeMultihash = (multihash) => Buffer.from(multihash.bytes).toString("hex");
+exports.encodeMultihash = encodeMultihash;
+const encodedHashFromMultihash = (multihash) => Buffer.from(multihash.digest).toString("hex");
+exports.encodedHashFromMultihash = encodedHashFromMultihash;
 const debugPrintDigest = (digest) => `${(0, exports.algorithmName)(digest.code)}:${Buffer.from(digest.digest).toString("hex")}`;
 exports.debugPrintDigest = debugPrintDigest;
 // A `MultihashAlgorithm` implemented using Node's `crypto` module.
@@ -520,9 +524,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.listMultihashes = exports.putArtifactFile = exports.newClient = void 0;
+exports.listMultihashes = exports.putArtifactFile = exports.multihashFromKey = exports.keyFromMultihash = exports.newClient = void 0;
 const fs_1 = __importDefault(__nccwpck_require__(57147));
 const client_s3_1 = __nccwpck_require__(19250);
+const hash_1 = __nccwpck_require__(41859);
 const newClient = (params) => {
     var _a;
     return new client_s3_1.S3Client({
@@ -573,13 +578,17 @@ const listObjectKeys = ({ client, bucket, prefix, }) => __awaiter(void 0, void 0
     }
     return keys;
 });
+const keyFromMultihash = ({ multihash, prefix, }) => prefix + multihash;
+exports.keyFromMultihash = keyFromMultihash;
+const multihashFromKey = ({ key, prefix, }) => key.substring(prefix.length);
+exports.multihashFromKey = multihashFromKey;
 const putArtifactFile = ({ client, bucket, filePath, multihash, prefix, mediaType, }) => __awaiter(void 0, void 0, void 0, function* () {
     const fileStats = yield fs_1.default.promises.stat(filePath);
     yield putObject({
         client,
         bucket,
         body: fs_1.default.createReadStream(filePath),
-        key: prefix + Buffer.from(multihash.bytes).toString("hex"),
+        key: (0, exports.keyFromMultihash)({ prefix, multihash: (0, hash_1.encodeMultihash)(multihash) }),
         prefix,
         mediaType,
         contentLength: fileStats.size,
@@ -590,7 +599,7 @@ const listMultihashes = ({ client, bucket, prefix, }) => __awaiter(void 0, void 
     const multihashes = new Set();
     const keys = yield listObjectKeys({ client, bucket, prefix });
     for (const key of keys) {
-        multihashes.add(key.substring(prefix.length));
+        multihashes.add((0, exports.multihashFromKey)({ key, prefix }));
     }
     return multihashes;
 });
@@ -693,6 +702,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.toApi = void 0;
 const path_1 = __importDefault(__nccwpck_require__(71017));
 const hash_1 = __nccwpck_require__(41859);
+const s3_1 = __nccwpck_require__(81863);
 const toApi = (input, params) => ({
     slug: input.slug,
     title: input.title,
@@ -704,8 +714,12 @@ const toApi = (input, params) => ({
             name: fileInput.name,
             fileName: fileInput.fileName,
             mediaType: fileInput.mediaType,
-            hash: Buffer.from(multihash.digest).toString("hex"),
+            hash: (0, hash_1.encodedHashFromMultihash)(multihash),
             hashAlgorithm: (0, hash_1.algorithmName)(multihash.code),
+            storageKey: (0, s3_1.keyFromMultihash)({
+                prefix: params.s3Prefix,
+                multihash: fileInput.multihash,
+            }),
             url: new URL(
             // We need URL paths use forward slashes, even on Windows.
             path_1.default.posix.join("artifacts", input.slug, fileInput.fileName), params.baseUrl).toString(),
