@@ -1,7 +1,13 @@
 import path from "path";
 import { Artifact } from "./api";
-import { algorithmName, decodeMultihash } from "./hash";
+import {
+  algorithmName,
+  decodeMultihash,
+  encodedHashFromMultihash,
+  encodeMultihash,
+} from "./hash";
 import { Params } from "./params";
+import { keyFromMultihash } from "./s3";
 
 export type JsonValue =
   | string
@@ -55,8 +61,12 @@ export const toApi = (input: ArtifactSubmission, params: Params): Artifact => ({
       name: fileInput.name,
       fileName: fileInput.fileName,
       mediaType: fileInput.mediaType,
-      hash: Buffer.from(multihash.digest).toString("hex"),
+      hash: encodedHashFromMultihash(multihash),
       hashAlgorithm: algorithmName(multihash.code),
+      storageKey: keyFromMultihash({
+        prefix: params.s3Prefix,
+        multihash: fileInput.multihash,
+      }),
       url: new URL(
         // We need URL paths use forward slashes, even on Windows.
         path.posix.join("artifacts", input.slug, fileInput.fileName),

@@ -7,6 +7,7 @@ import {
   paginateListObjectsV2,
 } from "@aws-sdk/client-s3";
 import { MultihashDigest } from "multiformats/hashes/interface";
+import { encodeMultihash } from "./hash";
 
 export const newClient = (params: Params): S3Client => {
   return new S3Client({
@@ -31,7 +32,7 @@ const putObject = async ({
   bucket: string;
   body: stream.Readable;
   key: string;
-  prefix?: string;
+  prefix: string;
   mediaType?: string;
   contentLength?: number;
 }): Promise<void> => {
@@ -79,6 +80,22 @@ const listObjectKeys = async ({
   return keys;
 };
 
+export const keyFromMultihash = ({
+  multihash,
+  prefix,
+}: {
+  multihash: string;
+  prefix: string;
+}): string => prefix + multihash;
+
+export const multihashFromKey = ({
+  key,
+  prefix,
+}: {
+  key: string;
+  prefix: string;
+}): string => key.substring(prefix.length);
+
 export const putArtifactFile = async ({
   client,
   bucket,
@@ -91,7 +108,7 @@ export const putArtifactFile = async ({
   bucket: string;
   filePath: fs.PathLike;
   multihash: MultihashDigest;
-  prefix?: string;
+  prefix: string;
   mediaType?: string;
 }): Promise<void> => {
   const fileStats = await fs.promises.stat(filePath);
@@ -99,7 +116,7 @@ export const putArtifactFile = async ({
     client,
     bucket,
     body: fs.createReadStream(filePath),
-    key: prefix + Buffer.from(multihash.bytes).toString("hex"),
+    key: keyFromMultihash({ prefix, multihash: encodeMultihash(multihash) }),
     prefix,
     mediaType,
     contentLength: fileStats.size,
@@ -119,7 +136,7 @@ export const listMultihashes = async ({
 
   const keys = await listObjectKeys({ client, bucket, prefix });
   for (const key of keys) {
-    multihashes.add(key.substring(prefix.length));
+    multihashes.add(multihashFromKey({ key, prefix }));
   }
 
   return multihashes;

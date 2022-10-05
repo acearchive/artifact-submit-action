@@ -6,6 +6,7 @@ export type ArtifactFile = Readonly<{
   mediaType?: string;
   hash: string;
   hashAlgorithm: string;
+  storageKey: string;
   url: string;
   aliases: ReadonlyArray<string>;
 }>;

@@ -66,6 +66,12 @@ export const algorithmName = (code: number): string =>
 export const decodeMultihash = (hex: string): MultihashDigest =>
   multihash.decode(Buffer.from(hex, "hex"));
 
+export const encodeMultihash = (multihash: MultihashDigest): string =>
+  Buffer.from(multihash.bytes).toString("hex");
+
+export const encodedHashFromMultihash = (multihash: MultihashDigest): string =>
+  Buffer.from(multihash.digest).toString("hex");
+
 export const debugPrintDigest = (digest: MultihashDigest): string =>
   `${algorithmName(digest.code)}:${Buffer.from(digest.digest).toString("hex")}`;
 
