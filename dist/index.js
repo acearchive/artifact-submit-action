@@ -213,7 +213,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.putArtifactMetadata = void 0;
+exports.putArtifactMetadataList = exports.putArtifactMetadata = void 0;
 const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
 const api_1 = __nccwpck_require__(88947);
 const putKey = ({ accountId, secretToken, namespace, key, obj, }) => __awaiter(void 0, void 0, void 0, function* () {
@@ -236,6 +236,16 @@ const putArtifactMetadata = ({ accountId, secretToken, namespace, artifact, }) =
     });
 });
 exports.putArtifactMetadata = putArtifactMetadata;
+const putArtifactMetadataList = ({ accountId, secretToken, namespace, artifacts, }) => __awaiter(void 0, void 0, void 0, function* () {
+    yield putKey({
+        accountId,
+        secretToken,
+        namespace,
+        key: `artifacts:v${api_1.version}`,
+        obj: artifacts,
+    });
+});
+exports.putArtifactMetadataList = putArtifactMetadataList;
 
 
 /***/ }),
@@ -314,6 +324,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
     });
     core.info(`Found ${existingMultihashes.size} artifact files in the S3 bucket.`);
     let filesUploaded = 0;
+    const artifactMetadataList = [];
     for (const submission of submissions) {
         for (const fileSubmission of submission.files) {
             const multihash = (0, hash_1.decodeMultihash)(fileSubmission.multihash);
@@ -341,14 +352,23 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
                 throw new Error(`Downloaded file does not match the hash included in the submission: ${submission.slug}/${fileSubmission.fileName}\nURL: ${fileSubmission.sourceUrl}\nExpected: ${(0, hash_1.debugPrintDigest)(multihash)}\nActual: ${(0, hash_1.debugPrintDigest)(downloadResult.actualDigest)}`);
             }
         }
+        const artifactMetadata = (0, submission_1.toApi)(submission, params);
+        artifactMetadataList.push(artifactMetadata);
         yield (0, kv_1.putArtifactMetadata)({
             accountId: params.cloudflareAccountId,
             secretToken: params.cloudflareApiToken,
             namespace: params.kvNamespaceId,
-            artifact: (0, submission_1.toApi)(submission, params),
+            artifact: artifactMetadata,
         });
         core.info(`Wrote artifact metadata: ${submission.slug}`);
     }
+    yield (0, kv_1.putArtifactMetadataList)({
+        accountId: params.cloudflareAccountId,
+        secretToken: params.cloudflareApiToken,
+        namespace: params.kvNamespaceId,
+        artifacts: artifactMetadataList,
+    });
+    core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
     core.info(`Uploaded ${filesUploaded} files to S3.`);
 });
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
