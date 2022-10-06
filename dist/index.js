@@ -649,7 +649,7 @@ exports.schema = joi_1.default.object({
     version: joi_1.default.number().integer().equal(exports.version).required(),
     slug: joi_1.default.string()
         .pattern(urlSlugPattern)
-        .min(16)
+        .min(12)
         .max(64)
         .empty("")
         .required(),
