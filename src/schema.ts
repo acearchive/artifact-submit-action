@@ -14,7 +14,7 @@ export const schema = Joi.object({
   version: Joi.number().integer().equal(version).required(),
   slug: Joi.string()
     .pattern(urlSlugPattern)
-    .min(16)
+    .min(12)
     .max(64)
     .empty("")
     .required(),
