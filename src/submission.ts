@@ -4,7 +4,6 @@ import {
   algorithmName,
   decodeMultihash,
   encodedHashFromMultihash,
-  encodeMultihash,
 } from "./hash";
 import { Params } from "./params";
 import { keyFromMultihash } from "./s3";
