@@ -368,6 +368,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         namespace: params.kvNamespaceId,
         artifacts: artifactMetadataList,
     });
+    core.setOutput("artifacts", artifactMetadataList);
     core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
     core.info(`Uploaded ${filesUploaded} files to S3.`);
 });
