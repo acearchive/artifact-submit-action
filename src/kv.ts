@@ -47,3 +47,23 @@ export const putArtifactMetadata = async ({
     obj: artifact,
   });
 };
+
+export const putArtifactMetadataList = async ({
+  accountId,
+  secretToken,
+  namespace,
+  artifacts,
+}: {
+  accountId: string;
+  secretToken: string;
+  namespace: string;
+  artifacts: ReadonlyArray<Artifact>;
+}): Promise<void> => {
+  await putKey({
+    accountId,
+    secretToken,
+    namespace,
+    key: `artifacts:v${version}`,
+    obj: artifacts,
+  });
+};

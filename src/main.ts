@@ -5,10 +5,11 @@ import { getParams } from "./params";
 import { getSubmissions } from "./repo";
 import { schema } from "./schema";
 import { downloadAndVerify } from "./download";
-import { putArtifactMetadata } from "./kv";
+import { putArtifactMetadata, putArtifactMetadataList } from "./kv";
 import { debugPrintDigest, decodeMultihash } from "./hash";
 import { listMultihashes, newClient, putArtifactFile } from "./s3";
 import { ArtifactSubmission, toApi } from "./submission";
+import { Artifact } from "./api";
 
 const main = async (): Promise<void> => {
   const params = getParams();
@@ -45,6 +46,8 @@ const main = async (): Promise<void> => {
   );
 
   let filesUploaded = 0;
+
+  const artifactMetadataList: Artifact[] = [];
 
   for (const submission of submissions) {
     for (const fileSubmission of submission.files) {
@@ -96,15 +99,27 @@ const main = async (): Promise<void> => {
       }
     }
 
+    const artifactMetadata = toApi(submission, params);
+    artifactMetadataList.push(artifactMetadata);
+
     await putArtifactMetadata({
       accountId: params.cloudflareAccountId,
       secretToken: params.cloudflareApiToken,
       namespace: params.kvNamespaceId,
-      artifact: toApi(submission, params),
+      artifact: artifactMetadata,
     });
 
     core.info(`Wrote artifact metadata: ${submission.slug}`);
   }
+
+  await putArtifactMetadataList({
+    accountId: params.cloudflareAccountId,
+    secretToken: params.cloudflareApiToken,
+    namespace: params.kvNamespaceId,
+    artifacts: artifactMetadataList,
+  });
+
+  core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
 
   core.info(`Uploaded ${filesUploaded} files to S3.`);
 };
