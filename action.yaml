@@ -54,6 +54,11 @@ inputs:
     description: >
       The namespace ID for Cloudflare Workers KV.
     required: true
+outputs:
+  artifacts:
+    description: >
+      A JSON array containing the artifact metadata generated from each
+      submission file.
 runs:
   using: "node16"
   main: "dist/index.js"

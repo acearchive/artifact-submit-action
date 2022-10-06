@@ -119,6 +119,8 @@ const main = async (): Promise<void> => {
     artifacts: artifactMetadataList,
   });
 
+  core.setOutput("artifacts", artifactMetadataList);
+
   core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
 
   core.info(`Uploaded ${filesUploaded} files to S3.`);
