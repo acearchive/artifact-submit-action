@@ -139,7 +139,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.blake2b512 = exports.debugPrintDigest = exports.encodedHashFromMultihash = exports.encodeMultihash = exports.decodeMultihash = exports.algorithmName = exports.isSupportedDigest = exports.isSupportedAlgorithm = exports.algorithmByCode = exports.hashFile = void 0;
+exports.defaultAlgorithm = exports.debugPrintDigest = exports.encodedHashFromMultihash = exports.encodeMultihash = exports.decodeMultihash = exports.algorithmName = exports.isSupportedDigest = exports.isSupportedAlgorithm = exports.algorithmByCode = exports.hashFile = void 0;
 const hasha_1 = __importDefault(__nccwpck_require__(44933));
 const multihash = __importStar(__nccwpck_require__(20076));
 const hashFile = (file, algorithm) => __awaiter(void 0, void 0, void 0, function* () {
@@ -149,13 +149,13 @@ const hashFile = (file, algorithm) => __awaiter(void 0, void 0, void 0, function
 exports.hashFile = hashFile;
 const invalidCodeError = (code) => new Error(`A hash algorithm with the multihash code 0x${code.toString(16)} is not supported.\nFor more information, see this repo: https://github.com/multiformats/multicodec`);
 const multihashCodes = {
-    blake2b512: 0xb240,
+    sha2_512: 0x13,
 };
 const supportedCodes = new Set(Object.values(multihashCodes));
 const algorithmByCode = (code) => {
     switch (code) {
-        case multihashCodes.blake2b512:
-            return exports.blake2b512;
+        case multihashCodes.sha2_512:
+            return sha2_512;
         default:
             throw invalidCodeError(code);
     }
@@ -190,7 +190,8 @@ class HashaMultihashAlgorithm {
         });
     }
 }
-exports.blake2b512 = new HashaMultihashAlgorithm("blake2b-512", multihashCodes.blake2b512, "blake2b512");
+const sha2_512 = new HashaMultihashAlgorithm("sha2-512", multihashCodes.sha2_512, "sha512");
+exports.defaultAlgorithm = sha2_512;
 
 
 /***/ }),
