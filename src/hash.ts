@@ -28,7 +28,7 @@ const invalidCodeError = (code: number): Error =>
   );
 
 const multihashCodes = {
-  blake2b512: 0xb240,
+  sha2_512: 0x13,
 } as const;
 
 const supportedCodes: Set<number> = new Set(Object.values(multihashCodes));
@@ -41,8 +41,8 @@ export const algorithmByCode = (
   code: number
 ): MultihashAlgorithm<SupportedCode> => {
   switch (code) {
-    case multihashCodes.blake2b512:
-      return blake2b512 as MultihashAlgorithm<SupportedCode>;
+    case multihashCodes.sha2_512:
+      return sha2_512 as MultihashAlgorithm<SupportedCode>;
     default:
       throw invalidCodeError(code);
   }
@@ -97,9 +97,7 @@ class HashaMultihashAlgorithm<Code extends number>
   }
 }
 
-export const blake2b512: MultihashAlgorithm<MultihashCodes["blake2b512"]> =
-  new HashaMultihashAlgorithm(
-    "blake2b-512",
-    multihashCodes.blake2b512,
-    "blake2b512"
-  );
+const sha2_512: MultihashAlgorithm<MultihashCodes["sha2_512"]> =
+  new HashaMultihashAlgorithm("sha2-512", multihashCodes.sha2_512, "sha512");
+
+export const defaultAlgorithm: MultihashAlgorithm = sha2_512;
