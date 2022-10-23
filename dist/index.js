@@ -646,6 +646,8 @@ const urlSlugPattern = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const fileNamePattern = /^[a-z0-9][a-z0-9-]*[a-z0-9](\/[a-z0-9][a-z0-9-]*[a-z0-9])*(\.[a-z0-9]+)*$/;
 const mediaTypePattern = /^(application|audio|font|image|model|text|video|message|multipart)\/[\w\d.+-]+$/;
 const decadeFromYear = (year) => year - (year % 10);
+// This schema should be kept in sync with the Yup schema in the
+// `acearchive/acearchive.lgbt` repo.
 exports.schema = joi_1.default.object({
     version: joi_1.default.number().integer().equal(exports.version).required(),
     slug: joi_1.default.string()
