@@ -748,6 +748,7 @@ const toApi = (input, params) => ({
             url: new URL(
             // We need URL paths use forward slashes, even on Windows.
             path_1.default.posix.join("artifacts", input.slug, fileInput.fileName), params.baseUrl).toString(),
+            hidden: fileInput.hidden,
             aliases: fileInput.aliases,
         };
     }),
