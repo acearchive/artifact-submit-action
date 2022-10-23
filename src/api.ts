@@ -8,6 +8,7 @@ export type ArtifactFile = Readonly<{
   hashAlgorithm: string;
   storageKey: string;
   url: string;
+  hidden: boolean;
   aliases: ReadonlyArray<string>;
 }>;
 
