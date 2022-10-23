@@ -43,6 +43,7 @@ export const schema = Joi.object({
           .uri({ scheme: ["http", "https"] })
           .empty("")
           .required(),
+        hidden: Joi.bool().default(false),
         aliases: Joi.array()
           .unique()
           .items(Joi.string().pattern(fileNamePattern).empty(""))
