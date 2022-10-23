@@ -675,6 +675,7 @@ exports.schema = joi_1.default.object({
             .uri({ scheme: ["http", "https"] })
             .empty("")
             .required(),
+        hidden: joi_1.default.bool().default(false),
         aliases: joi_1.default.array()
             .unique()
             .items(joi_1.default.string().pattern(fileNamePattern).empty(""))
