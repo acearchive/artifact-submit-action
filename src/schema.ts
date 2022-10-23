@@ -10,6 +10,8 @@ const mediaTypePattern =
 
 const decadeFromYear = (year: number): number => year - (year % 10);
 
+// This schema should be kept in sync with the Yup schema in the
+// `acearchive/acearchive.lgbt` repo.
 export const schema = Joi.object({
   version: Joi.number().integer().equal(version).required(),
   slug: Joi.string()
