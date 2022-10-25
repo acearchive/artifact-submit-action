@@ -4,8 +4,11 @@ import hasha from "hasha";
 import * as multihash from "multiformats/hashes/digest";
 import { MultihashDigest } from "multiformats/hashes/interface";
 
+//
 // Definitions for multihash algorithms can be found here:
 // https://github.com/multiformats/multicodec/blob/master/table.csv
+//
+
 export interface MultihashAlgorithm<Code extends number = number> {
   readonly name: string;
   readonly code: Code;
@@ -28,7 +31,7 @@ const invalidCodeError = (code: number): Error =>
   );
 
 const multihashCodes = {
-  sha2_512: 0x13,
+  sha2_256: 0x12,
 } as const;
 
 const supportedCodes: Set<number> = new Set(Object.values(multihashCodes));
@@ -41,8 +44,8 @@ export const algorithmByCode = (
   code: number
 ): MultihashAlgorithm<SupportedCode> => {
   switch (code) {
-    case multihashCodes.sha2_512:
-      return sha2_512 as MultihashAlgorithm<SupportedCode>;
+    case multihashCodes.sha2_256:
+      return sha2_256 as MultihashAlgorithm<SupportedCode>;
     default:
       throw invalidCodeError(code);
   }
@@ -97,7 +100,7 @@ class HashaMultihashAlgorithm<Code extends number>
   }
 }
 
-const sha2_512: MultihashAlgorithm<MultihashCodes["sha2_512"]> =
-  new HashaMultihashAlgorithm("sha2-512", multihashCodes.sha2_512, "sha512");
+const sha2_256: MultihashAlgorithm<MultihashCodes["sha2_256"]> =
+  new HashaMultihashAlgorithm("sha2-256", multihashCodes.sha2_256, "sha256");
 
-export const defaultAlgorithm: MultihashAlgorithm = sha2_512;
+export const defaultAlgorithm: MultihashAlgorithm = sha2_256;
