@@ -149,13 +149,13 @@ const hashFile = (file, algorithm) => __awaiter(void 0, void 0, void 0, function
 exports.hashFile = hashFile;
 const invalidCodeError = (code) => new Error(`A hash algorithm with the multihash code 0x${code.toString(16)} is not supported.\nFor more information, see this repo: https://github.com/multiformats/multicodec`);
 const multihashCodes = {
-    sha2_512: 0x13,
+    sha2_256: 0x12,
 };
 const supportedCodes = new Set(Object.values(multihashCodes));
 const algorithmByCode = (code) => {
     switch (code) {
-        case multihashCodes.sha2_512:
-            return sha2_512;
+        case multihashCodes.sha2_256:
+            return sha2_256;
         default:
             throw invalidCodeError(code);
     }
@@ -190,8 +190,8 @@ class HashaMultihashAlgorithm {
         });
     }
 }
-const sha2_512 = new HashaMultihashAlgorithm("sha2-512", multihashCodes.sha2_512, "sha512");
-exports.defaultAlgorithm = sha2_512;
+const sha2_256 = new HashaMultihashAlgorithm("sha2-256", multihashCodes.sha2_256, "sha256");
+exports.defaultAlgorithm = sha2_256;
 
 
 /***/ }),
