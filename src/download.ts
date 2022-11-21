@@ -11,7 +11,19 @@ import fetch from "node-fetch";
 
 import { algorithmByCode, hashFile } from "./hash";
 
-const downloadFile = async (
+export const headFile = async (url: URL): Promise<{ mediaType?: string }> => {
+  const response = await fetch(url.toString(), { method: "HEAD" });
+  const responseContentType = response.headers.get("Content-Type");
+
+  return {
+    mediaType:
+      responseContentType === null
+        ? undefined
+        : contentType.parse(responseContentType).type,
+  };
+};
+
+export const downloadFile = async (
   url: URL
 ): Promise<{ path: fs.PathLike; mediaType?: string }> => {
   const tempDirPath = await fsPromises.mkdtemp(

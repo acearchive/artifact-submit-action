@@ -22,11 +22,18 @@ export type ArtifactFileSubmission = Readonly<{
   name: string;
   fileName: string;
   mediaType?: string;
-  multihash: string;
+  multihash?: string;
   sourceUrl: URL;
   hidden: boolean;
   aliases: ReadonlyArray<string>;
 }>;
+
+export type ValidatedFileSubmission = Omit<
+  ArtifactFileSubmission,
+  "multihash"
+> & {
+  multihash: NonNullable<ArtifactFileSubmission["multihash"]>;
+};
 
 export type ArtifactLinkSubmission = Readonly<{
   name: string;
@@ -49,7 +56,21 @@ export type ArtifactSubmission = Readonly<{
   aliases: ReadonlyArray<string>;
 }>;
 
-export const toApi = (input: ArtifactSubmission, params: Params): Artifact => ({
+export type ValidatedArtifactSubmission = Omit<ArtifactSubmission, "files"> & {
+  files: ReadonlyArray<ValidatedFileSubmission>;
+};
+
+export const isSubmissionValidated = (
+  submission: ArtifactSubmission
+): submission is ValidatedArtifactSubmission =>
+  submission.files.every(
+    (fileSubmission) => fileSubmission.multihash !== undefined
+  );
+
+export const toApi = (
+  input: ValidatedArtifactSubmission,
+  params: Params
+): Artifact => ({
   slug: input.slug,
   title: input.title,
   summary: input.summary,

@@ -1,37 +1,64 @@
 import * as core from "@actions/core";
 import Joi from "joi";
 
-import { getParams } from "./params";
+import { getParams, Params } from "./params";
 import { getSubmissions } from "./repo";
 import { schema } from "./schema";
 import { downloadAndVerify } from "./download";
 import { putArtifactMetadata, putArtifactMetadataList } from "./kv";
 import { debugPrintDigest, decodeMultihash } from "./hash";
 import { listMultihashes, newClient, putArtifactFile } from "./s3";
-import { ArtifactSubmission, toApi } from "./submission";
+import { ArtifactSubmission, isSubmissionValidated, toApi } from "./submission";
 import { Artifact } from "./api";
+import {
+  getFileSubmissionUpdateStats,
+  upadateFileSubmissions,
+  writeFileSubmissions,
+} from "./validate";
 
-const main = async (): Promise<void> => {
-  const params = getParams();
-  const rawSubmissions = await getSubmissions(params.repo, params.path);
+const validate = async ({
+  params,
+  submissions,
+}: {
+  params: Params;
+  submissions: ReadonlyArray<ArtifactSubmission>;
+}): Promise<void> => {
+  core.info("Updating file submissions missing hashes or media types...");
 
-  core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
+  // Calculate the multihash for file submissions which don't have one and also
+  // set the media type for file submissions which don't have one if the GET or
+  // HEAD response returns a `Content-Type` header.
+  const updatedSubmissions = await upadateFileSubmissions(submissions);
+  await writeFileSubmissions(updatedSubmissions, params);
 
-  const submissions = new Array<ArtifactSubmission>();
+  const { filesUpdatedByArtifact, artifactsUpdated, totalFilesUpdated } =
+    getFileSubmissionUpdateStats(submissions, updatedSubmissions);
 
-  for (const rawSubmission of rawSubmissions) {
-    submissions.push(
-      Joi.attempt(rawSubmission, schema, {
-        abortEarly: false,
-        convert: false,
-      })
-    );
+  core.info(
+    `Updated ${totalFilesUpdated} file submissions in ${artifactsUpdated} artifact submissions.`
+  );
+
+  if (totalFilesUpdated > 0) {
+    core.info("Updated these file submissions:");
+
+    for (const [
+      artifactSlug,
+      fileNameSet,
+    ] of filesUpdatedByArtifact.entries()) {
+      for (const fileName of fileNameSet) {
+        core.info(`  ${artifactSlug}/${fileName}`);
+      }
+    }
   }
+};
 
-  core.info(`All submissions match the schema!`);
-
-  if (!params.upload) return;
-
+const upload = async ({
+  params,
+  submissions,
+}: {
+  params: Params;
+  submissions: ReadonlyArray<ArtifactSubmission>;
+}): Promise<void> => {
   core.info("Starting the upload process...");
 
   const s3Client = newClient(params);
@@ -50,6 +77,12 @@ const main = async (): Promise<void> => {
   const artifactMetadataList: Artifact[] = [];
 
   for (const submission of submissions) {
+    if (!isSubmissionValidated(submission)) {
+      throw new Error(
+        `Submission has at least one file with no multihash: ${submission.slug}\nYou must run in \`validate\` mode first to compute missing multihashes.`
+      );
+    }
+
     for (const fileSubmission of submission.files) {
       const multihash = decodeMultihash(fileSubmission.multihash);
 
@@ -124,6 +157,36 @@ const main = async (): Promise<void> => {
   core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
 
   core.info(`Uploaded ${filesUploaded} files to S3.`);
+};
+
+const main = async (): Promise<void> => {
+  const params = getParams();
+  const rawSubmissions = await getSubmissions(params.repo, params.path);
+
+  core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
+
+  const submissions = new Array<ArtifactSubmission>();
+
+  for (const rawSubmission of rawSubmissions) {
+    submissions.push(
+      Joi.attempt(rawSubmission, schema, {
+        abortEarly: false,
+        convert: false,
+        context: {
+          mode: params.mode,
+        },
+      })
+    );
+  }
+
+  core.info(`All submissions match the schema!`);
+
+  switch (params.mode) {
+    case "validate":
+      return await validate({ params, submissions });
+    case "upload":
+      return await upload({ params, submissions });
+  }
 };
 
 const run = async (): Promise<void> => {

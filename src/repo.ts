@@ -43,3 +43,13 @@ export const getSubmissions = async (
 
   return submissions;
 };
+
+export const getSubmissionPath = ({
+  repoPath,
+  submissionPath,
+  artifactSlug,
+}: {
+  repoPath: string;
+  submissionPath: string;
+  artifactSlug: string;
+}): string => path.join(repoPath, submissionPath, `${artifactSlug}.json`);

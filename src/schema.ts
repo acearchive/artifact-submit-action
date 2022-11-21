@@ -36,7 +36,11 @@ export const schema = Joi.object({
         name: Joi.string().max(256).empty("").required(),
         fileName: Joi.string().pattern(fileNamePattern).empty("").required(),
         mediaType: Joi.string().pattern(mediaTypePattern).empty(""),
-        multihash: Joi.string().hex().empty("").required(),
+        multihash: Joi.when(Joi.ref("$mode"), {
+          is: "validate",
+          then: Joi.string().hex().empty(""),
+          otherwise: Joi.string().hex().empty("").required(),
+        }),
         sourceUrl: Joi.string()
           // We allow HTTP URLs for importing only because we're validating their checksums
           // anyways.

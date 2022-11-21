@@ -3,8 +3,10 @@ import { URL } from "url";
 import Joi from "joi";
 import * as core from "@actions/core";
 
+export type Mode = "validate" | "upload";
+
 export type Params = Readonly<{
-  upload: boolean;
+  mode: Mode;
   repo: string;
   path: string;
   baseUrl: URL;
@@ -20,7 +22,7 @@ export type Params = Readonly<{
 }>;
 
 const schema = Joi.object({
-  upload: Joi.boolean().label("upload"),
+  mode: Joi.string().required().label("mode").valid("validate", "upload"),
   repo: Joi.string().required().label("GITHUB_WORKSPACE"),
   path: Joi.string().uri({ relativeOnly: true }).required().label("path"),
   baseUrl: Joi.string().uri({ scheme: "https" }).required().label("base_url"),
@@ -51,7 +53,7 @@ export const getParams = (): Params => {
 
   return Joi.attempt(
     {
-      upload: core.getInput("upload", { required: true }),
+      mode: core.getInput("mode", { required: true }),
       repo: process.env.GITHUB_WORKSPACE,
       path: core.getInput("path", { required: true }),
       baseUrl: core.getInput("base_url", { required: true }),

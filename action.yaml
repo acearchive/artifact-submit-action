@@ -3,12 +3,17 @@ author: "Ace Archive"
 description: >
   A GitHub action for submitting artifacts to Ace Archive.
 inputs:
-  upload:
+  mode:
     description: >
-      If `true`, validate the syntax of the submission files and upload files to
-      S3. If `false, just validate.
+      The mode to operate in, either `validate` or `upload`.
+
+      In `validate` mode, the syntax of the submission files is validated and
+      the hashes and media types of files without one are computed and added to
+      the submission JSON in the job's local clone of the repo.
+
+      In `upload` mode, files are downloaded, their hashes are validated, and
+      they are uploaded to S3.
     required: true
-    default: "false"
   path:
     description: >
       The path of the directory in the git repository to read the submission
@@ -59,6 +64,7 @@ outputs:
     description: >
       A JSON array containing the artifact metadata generated from each
       submission file.
+
 runs:
   using: "node16"
   main: "dist/index.js"
