@@ -54,7 +54,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.downloadAndVerify = void 0;
+exports.downloadAndVerify = exports.downloadFile = exports.headFile = void 0;
 const fs_1 = __importDefault(__nccwpck_require__(57147));
 const promises_1 = __importDefault(__nccwpck_require__(73292));
 const os_1 = __importDefault(__nccwpck_require__(22037));
@@ -64,6 +64,16 @@ const contentType = __importStar(__nccwpck_require__(99915));
 const digest_1 = __nccwpck_require__(20076);
 const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
 const hash_1 = __nccwpck_require__(41859);
+const headFile = (url) => __awaiter(void 0, void 0, void 0, function* () {
+    const response = yield (0, node_fetch_1.default)(url.toString(), { method: "HEAD" });
+    const responseContentType = response.headers.get("Content-Type");
+    return {
+        mediaType: responseContentType === null
+            ? undefined
+            : contentType.parse(responseContentType).type,
+    };
+});
+exports.headFile = headFile;
 const downloadFile = (url) => __awaiter(void 0, void 0, void 0, function* () {
     const tempDirPath = yield promises_1.default.mkdtemp(path_1.default.join(os_1.default.tmpdir(), "artifact-submit-action-"));
     const tempFile = fs_1.default.createWriteStream(path_1.default.join(tempDirPath, "file"));
@@ -79,8 +89,9 @@ const downloadFile = (url) => __awaiter(void 0, void 0, void 0, function* () {
             : contentType.parse(responseContentType).type,
     };
 });
+exports.downloadFile = downloadFile;
 const downloadAndVerify = (url, expectedDigest) => __awaiter(void 0, void 0, void 0, function* () {
-    const downloadedFile = yield downloadFile(url);
+    const downloadedFile = yield (0, exports.downloadFile)(url);
     const actualDigest = yield (0, hash_1.hashFile)(downloadedFile.path, (0, hash_1.algorithmByCode)(expectedDigest.code));
     if (!(0, digest_1.equals)(actualDigest, expectedDigest)) {
         return {
@@ -302,20 +313,26 @@ const kv_1 = __nccwpck_require__(18116);
 const hash_1 = __nccwpck_require__(41859);
 const s3_1 = __nccwpck_require__(81863);
 const submission_1 = __nccwpck_require__(16307);
-const main = () => __awaiter(void 0, void 0, void 0, function* () {
-    const params = (0, params_1.getParams)();
-    const rawSubmissions = yield (0, repo_1.getSubmissions)(params.repo, params.path);
-    core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
-    const submissions = new Array();
-    for (const rawSubmission of rawSubmissions) {
-        submissions.push(joi_1.default.attempt(rawSubmission, schema_1.schema, {
-            abortEarly: false,
-            convert: false,
-        }));
+const validate_1 = __nccwpck_require__(81997);
+const validate = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
+    core.info("Updating file submissions missing hashes or media types...");
+    // Calculate the multihash for file submissions which don't have one and also
+    // set the media type for file submissions which don't have one if the GET or
+    // HEAD response returns a `Content-Type` header.
+    const updatedSubmissions = yield (0, validate_1.upadateFileSubmissions)(submissions);
+    yield (0, validate_1.writeFileSubmissions)(updatedSubmissions, params);
+    const { filesUpdatedByArtifact, artifactsUpdated, totalFilesUpdated } = (0, validate_1.getFileSubmissionUpdateStats)(submissions, updatedSubmissions);
+    core.info(`Updated ${totalFilesUpdated} file submissions in ${artifactsUpdated} artifact submissions.`);
+    if (totalFilesUpdated > 0) {
+        core.info("Updated these file submissions:");
+        for (const [artifactSlug, fileNameSet,] of filesUpdatedByArtifact.entries()) {
+            for (const fileName of fileNameSet) {
+                core.info(`  ${artifactSlug}/${fileName}`);
+            }
+        }
     }
-    core.info(`All submissions match the schema!`);
-    if (!params.upload)
-        return;
+});
+const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
     core.info("Starting the upload process...");
     const s3Client = (0, s3_1.newClient)(params);
     const existingMultihashes = yield (0, s3_1.listMultihashes)({
@@ -327,6 +344,9 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
     let filesUploaded = 0;
     const artifactMetadataList = [];
     for (const submission of submissions) {
+        if (!(0, submission_1.isSubmissionValidated)(submission)) {
+            throw new Error(`Submission has at least one file with no multihash: ${submission.slug}\nYou must run in \`validate\` mode first to compute missing multihashes.`);
+        }
         for (const fileSubmission of submission.files) {
             const multihash = (0, hash_1.decodeMultihash)(fileSubmission.multihash);
             // We can skip files that have already been uploaded to S3.
@@ -372,6 +392,28 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
     core.setOutput("artifacts", artifactMetadataList);
     core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
     core.info(`Uploaded ${filesUploaded} files to S3.`);
+});
+const main = () => __awaiter(void 0, void 0, void 0, function* () {
+    const params = (0, params_1.getParams)();
+    const rawSubmissions = yield (0, repo_1.getSubmissions)(params.repo, params.path);
+    core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
+    const submissions = new Array();
+    for (const rawSubmission of rawSubmissions) {
+        submissions.push(joi_1.default.attempt(rawSubmission, schema_1.schema, {
+            abortEarly: false,
+            convert: false,
+            context: {
+                mode: params.mode,
+            },
+        }));
+    }
+    core.info(`All submissions match the schema!`);
+    switch (params.mode) {
+        case "validate":
+            return yield validate({ params, submissions });
+        case "upload":
+            return yield upload({ params, submissions });
+    }
 });
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -423,7 +465,7 @@ exports.getParams = void 0;
 const joi_1 = __importDefault(__nccwpck_require__(20918));
 const core = __importStar(__nccwpck_require__(42186));
 const schema = joi_1.default.object({
-    upload: joi_1.default.boolean().label("upload"),
+    mode: joi_1.default.string().required().label("mode").valid("validate", "upload"),
     repo: joi_1.default.string().required().label("GITHUB_WORKSPACE"),
     path: joi_1.default.string().uri({ relativeOnly: true }).required().label("path"),
     baseUrl: joi_1.default.string().uri({ scheme: "https" }).required().label("base_url"),
@@ -450,7 +492,7 @@ const getParams = () => {
     core.setSecret(s3SecretAccessKey);
     core.setSecret(cloudflareApiToken);
     return joi_1.default.attempt({
-        upload: core.getInput("upload", { required: true }),
+        mode: core.getInput("mode", { required: true }),
         repo: process.env.GITHUB_WORKSPACE,
         path: core.getInput("path", { required: true }),
         baseUrl: core.getInput("base_url", { required: true }),
@@ -490,7 +532,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getSubmissions = void 0;
+exports.getSubmissionPath = exports.getSubmissions = void 0;
 const path_1 = __importDefault(__nccwpck_require__(71017));
 const promises_1 = __importDefault(__nccwpck_require__(73292));
 const submissionFileExt = ".json";
@@ -517,6 +559,8 @@ const getSubmissions = (repoPath, submissionPath) => __awaiter(void 0, void 0, v
     return submissions;
 });
 exports.getSubmissions = getSubmissions;
+const getSubmissionPath = ({ repoPath, submissionPath, artifactSlug, }) => path_1.default.join(repoPath, submissionPath, `${artifactSlug}.json`);
+exports.getSubmissionPath = getSubmissionPath;
 
 
 /***/ }),
@@ -668,7 +712,11 @@ exports.schema = joi_1.default.object({
         name: joi_1.default.string().max(256).empty("").required(),
         fileName: joi_1.default.string().pattern(fileNamePattern).empty("").required(),
         mediaType: joi_1.default.string().pattern(mediaTypePattern).empty(""),
-        multihash: joi_1.default.string().hex().empty("").required(),
+        multihash: joi_1.default.when(joi_1.default.ref("$mode"), {
+            is: "validate",
+            then: joi_1.default.string().hex().empty(""),
+            otherwise: joi_1.default.string().hex().empty("").required(),
+        }),
         sourceUrl: joi_1.default.string()
             // We allow HTTP URLs for importing only because we're validating their checksums
             // anyways.
@@ -724,10 +772,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.toApi = void 0;
+exports.toApi = exports.isSubmissionValidated = void 0;
 const path_1 = __importDefault(__nccwpck_require__(71017));
 const hash_1 = __nccwpck_require__(41859);
 const s3_1 = __nccwpck_require__(81863);
+const isSubmissionValidated = (submission) => submission.files.every((fileSubmission) => fileSubmission.multihash !== undefined);
+exports.isSubmissionValidated = isSubmissionValidated;
 const toApi = (input, params) => ({
     slug: input.slug,
     title: input.title,
@@ -764,6 +814,118 @@ const toApi = (input, params) => ({
     aliases: input.aliases,
 });
 exports.toApi = toApi;
+
+
+/***/ }),
+
+/***/ 81997:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.writeFileSubmissions = exports.getFileSubmissionUpdateStats = exports.upadateFileSubmissions = void 0;
+const promises_1 = __importDefault(__nccwpck_require__(73292));
+const download_1 = __nccwpck_require__(95933);
+const hash_1 = __nccwpck_require__(41859);
+const repo_1 = __nccwpck_require__(58139);
+// To avoid unnecessary noise in the git diffs, this should match the
+// indentation used for pretty-printing the submission JSON in the artifact
+// submission form in the `acearchive/acearchive.lgbt` repo.
+const jsonPrettyPrintIndent = 2;
+const computeFileValidationMap = (submissions) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const validationMap = new Map(submissions.flatMap(({ files }) => files.map(({ sourceUrl, multihash, mediaType }) => [
+        sourceUrl,
+        {
+            multihash,
+            mediaType,
+        },
+    ])));
+    for (const [sourceUrl, validation] of validationMap) {
+        if (validation.mediaType !== undefined &&
+            validation.multihash !== undefined)
+            continue;
+        if (validation.multihash === undefined) {
+            const { path, mediaType } = yield (0, download_1.downloadFile)(sourceUrl);
+            const multihash = yield (0, hash_1.hashFile)(path, hash_1.defaultAlgorithm);
+            validation.multihash = (0, hash_1.encodeMultihash)(multihash);
+            (_a = validation.mediaType) !== null && _a !== void 0 ? _a : (validation.mediaType = mediaType);
+        }
+        else {
+            const { mediaType } = yield (0, download_1.headFile)(sourceUrl);
+            (_b = validation.mediaType) !== null && _b !== void 0 ? _b : (validation.mediaType = mediaType);
+        }
+    }
+    return validationMap;
+});
+const applyFileValidationMap = (submissions, validationMap) => __awaiter(void 0, void 0, void 0, function* () {
+    return submissions.map((submission) => (Object.assign(Object.assign({}, submission), { files: submission.files.map((fileSubmission) => {
+            var _a;
+            const { mediaType, multihash } = (_a = validationMap.get(fileSubmission.sourceUrl)) !== null && _a !== void 0 ? _a : { mediaType: undefined, multihash: undefined };
+            return Object.assign(Object.assign({}, fileSubmission), { mediaType,
+                multihash });
+        }) })));
+});
+const upadateFileSubmissions = (submissions) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield applyFileValidationMap(submissions, yield computeFileValidationMap(submissions));
+});
+exports.upadateFileSubmissions = upadateFileSubmissions;
+const getFileSubmissionUpdateStats = (oldSubmissions, newSubmissions) => {
+    const filesUpdatedByArtifact = new Map();
+    let artifactsUpdated = 0;
+    let totalFilesUpdated = 0;
+    const newSubmissionsBySlug = new Map(newSubmissions.map((submission) => [submission.slug, submission]));
+    for (const oldSubmission of oldSubmissions) {
+        const newSubmission = newSubmissionsBySlug.get(oldSubmission.slug);
+        if (newSubmission === undefined)
+            continue;
+        const newFileSubmissionsByFileName = new Map(newSubmission.files.map((fileSubmission) => [
+            fileSubmission.fileName,
+            fileSubmission,
+        ]));
+        const updatedFileSet = new Set();
+        for (const oldFileSubmission of oldSubmission.files) {
+            const newFileSubmission = newFileSubmissionsByFileName.get(oldFileSubmission.fileName);
+            if (newFileSubmission === undefined)
+                continue;
+            if (oldFileSubmission.mediaType !== newFileSubmission.mediaType ||
+                oldFileSubmission.multihash !== newFileSubmission.multihash) {
+                totalFilesUpdated += 1;
+                updatedFileSet.add(oldFileSubmission.fileName);
+            }
+        }
+        if (updatedFileSet.size > 0) {
+            artifactsUpdated += 1;
+        }
+        filesUpdatedByArtifact.set(oldSubmission.slug, updatedFileSet);
+    }
+    return { filesUpdatedByArtifact, artifactsUpdated, totalFilesUpdated };
+};
+exports.getFileSubmissionUpdateStats = getFileSubmissionUpdateStats;
+const writeFileSubmissions = (submissions, params) => __awaiter(void 0, void 0, void 0, function* () {
+    for (const submission of submissions) {
+        const submissionPath = (0, repo_1.getSubmissionPath)({
+            repoPath: params.repo,
+            submissionPath: params.path,
+            artifactSlug: submission.slug,
+        });
+        yield promises_1.default.writeFile(submissionPath, JSON.stringify(submission, null, jsonPrettyPrintIndent));
+    }
+});
+exports.writeFileSubmissions = writeFileSubmissions;
 
 
 /***/ }),
