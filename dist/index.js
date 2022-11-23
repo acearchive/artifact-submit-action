@@ -305,6 +305,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(42186));
 const joi_1 = __importDefault(__nccwpck_require__(20918));
+const promises_1 = __importDefault(__nccwpck_require__(73292));
 const params_1 = __nccwpck_require__(62017);
 const repo_1 = __nccwpck_require__(58139);
 const schema_1 = __nccwpck_require__(5171);
@@ -367,6 +368,7 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
                     prefix: params.s3Prefix,
                     mediaType: fileSubmission.mediaType,
                 });
+                yield promises_1.default.unlink(downloadResult.path);
                 filesUploaded += 1;
             }
             else {
@@ -823,6 +825,29 @@ exports.toApi = toApi;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -837,6 +862,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.writeFileSubmissions = exports.getFileSubmissionUpdateStats = exports.upadateFileSubmissions = void 0;
+const core = __importStar(__nccwpck_require__(42186));
 const promises_1 = __importDefault(__nccwpck_require__(73292));
 const download_1 = __nccwpck_require__(95933);
 const hash_1 = __nccwpck_require__(41859);
@@ -859,15 +885,19 @@ const computeFileValidationMap = (submissions) => __awaiter(void 0, void 0, void
             validation.multihash !== undefined)
             continue;
         if (validation.multihash === undefined) {
+            core.info(`GET ${sourceUrl}`);
             const { path, mediaType } = yield (0, download_1.downloadFile)(sourceUrl);
             const multihash = yield (0, hash_1.hashFile)(path, hash_1.defaultAlgorithm);
+            yield promises_1.default.unlink(path);
             validation.multihash = (0, hash_1.encodeMultihash)(multihash);
             (_a = validation.mediaType) !== null && _a !== void 0 ? _a : (validation.mediaType = mediaType);
         }
         else {
+            core.info(`HEAD ${sourceUrl}`);
             const { mediaType } = yield (0, download_1.headFile)(sourceUrl);
             (_b = validation.mediaType) !== null && _b !== void 0 ? _b : (validation.mediaType = mediaType);
         }
+        core.info(`Successfully downloaded: ${sourceUrl}`);
     }
     return validationMap;
 });
