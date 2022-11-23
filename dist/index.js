@@ -311,6 +311,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(42186));
 const joi_1 = __importDefault(__nccwpck_require__(20918));
+const path_1 = __importDefault(__nccwpck_require__(71017));
 const promises_1 = __importDefault(__nccwpck_require__(73292));
 const params_1 = __nccwpck_require__(62017);
 const repo_1 = __nccwpck_require__(58139);
@@ -406,12 +407,13 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const rawSubmissions = yield (0, repo_1.getSubmissions)(params.repo, params.path);
     core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
     const submissions = new Array();
-    for (const rawSubmission of rawSubmissions) {
-        submissions.push(joi_1.default.attempt(rawSubmission, schema_1.schema, {
+    for (const { json, fileName } of rawSubmissions) {
+        submissions.push(joi_1.default.attempt(json, schema_1.schema, {
             abortEarly: false,
             convert: false,
             context: {
                 mode: params.mode,
+                slug: path_1.default.parse(fileName).name,
             },
         }));
     }
@@ -560,9 +562,7 @@ const getSubmissions = (repoPath, submissionPath) => __awaiter(void 0, void 0, v
         const fileContent = yield promises_1.default.readFile(fileName, {
             encoding: "utf-8",
         });
-        const fileJson = JSON.parse(fileContent);
-        fileJson.slug = path_1.default.parse(fileName).name;
-        submissions.push(fileJson);
+        submissions.push({ json: JSON.parse(fileContent), fileName: fileName });
     }
     return submissions;
 });
@@ -706,6 +706,7 @@ exports.schema = joi_1.default.object({
         .pattern(urlSlugPattern)
         .min(12)
         .max(64)
+        .equal(joi_1.default.ref("$slug"))
         .empty("")
         .required(),
     title: joi_1.default.string().trim().max(100).empty("").required(),
