@@ -1,5 +1,6 @@
 import * as core from "@actions/core";
 import Joi from "joi";
+import path from "path";
 import fsPromises from "fs/promises";
 
 import { getParams, Params } from "./params";
@@ -170,13 +171,14 @@ const main = async (): Promise<void> => {
 
   const submissions = new Array<ArtifactSubmission>();
 
-  for (const rawSubmission of rawSubmissions) {
+  for (const { json, fileName } of rawSubmissions) {
     submissions.push(
-      Joi.attempt(rawSubmission, schema, {
+      Joi.attempt(json, schema, {
         abortEarly: false,
         convert: false,
         context: {
           mode: params.mode,
+          slug: path.parse(fileName).name,
         },
       })
     );

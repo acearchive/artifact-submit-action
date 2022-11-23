@@ -22,23 +22,25 @@ const listSubmissionFiles = async (
     .map((entry) => path.join(fullPath, entry.name));
 };
 
+export type RawSubmission = Readonly<{
+  json: JsonObject;
+  fileName: string;
+}>;
+
 export const getSubmissions = async (
   repoPath: string,
   submissionPath: string
-): Promise<ReadonlyArray<JsonObject>> => {
+): Promise<ReadonlyArray<RawSubmission>> => {
   const fileNames = await listSubmissionFiles(repoPath, submissionPath);
 
-  const submissions: JsonObject[] = [];
+  const submissions: RawSubmission[] = [];
 
   for (const fileName of fileNames) {
     const fileContent = await fsPromises.readFile(fileName, {
       encoding: "utf-8",
     });
 
-    const fileJson = JSON.parse(fileContent);
-    fileJson.slug = path.parse(fileName).name;
-
-    submissions.push(fileJson);
+    submissions.push({ json: JSON.parse(fileContent), fileName: fileName });
   }
 
   return submissions;
