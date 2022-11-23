@@ -13,6 +13,11 @@ import { algorithmByCode, hashFile } from "./hash";
 
 export const headFile = async (url: URL): Promise<{ mediaType?: string }> => {
   const response = await fetch(url.toString(), { method: "HEAD" });
+
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}: ${url}`);
+  }
+
   const responseContentType = response.headers.get("Content-Type");
 
   return {
@@ -32,6 +37,10 @@ export const downloadFile = async (
   const tempFile = fs.createWriteStream(path.join(tempDirPath, "file"));
 
   const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}: ${url}`);
+  }
 
   if (response.body !== null) {
     await stream.pipeline(response.body, tempFile);
