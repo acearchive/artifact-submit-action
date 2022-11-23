@@ -803,6 +803,7 @@ const toApi = (input, params) => ({
             mediaType: fileInput.mediaType,
             hash: (0, hash_1.encodedHashFromMultihash)(multihash),
             hashAlgorithm: (0, hash_1.algorithmName)(multihash.code),
+            multihash: fileInput.multihash,
             storageKey: (0, s3_1.keyFromMultihash)({
                 prefix: params.s3Prefix,
                 multihash: fileInput.multihash,
