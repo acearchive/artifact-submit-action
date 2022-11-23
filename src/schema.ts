@@ -88,5 +88,8 @@ export const schema = Joi.object({
         .max(Joi.ref("...toYear", { adjust: decadeFromYear }))
     )
     .default([]),
-  aliases: Joi.array().unique().items(Joi.link("/slug")).default([]),
+  aliases: Joi.array()
+    .unique()
+    .items(Joi.string().pattern(urlSlugPattern).min(12).max(64).empty(""))
+    .default([]),
 });
