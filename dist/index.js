@@ -66,6 +66,9 @@ const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
 const hash_1 = __nccwpck_require__(41859);
 const headFile = (url) => __awaiter(void 0, void 0, void 0, function* () {
     const response = yield (0, node_fetch_1.default)(url.toString(), { method: "HEAD" });
+    if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}: ${url}`);
+    }
     const responseContentType = response.headers.get("Content-Type");
     return {
         mediaType: responseContentType === null
@@ -78,6 +81,9 @@ const downloadFile = (url) => __awaiter(void 0, void 0, void 0, function* () {
     const tempDirPath = yield promises_1.default.mkdtemp(path_1.default.join(os_1.default.tmpdir(), "artifact-submit-action-"));
     const tempFile = fs_1.default.createWriteStream(path_1.default.join(tempDirPath, "file"));
     const response = yield (0, node_fetch_1.default)(url.toString());
+    if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}: ${url}`);
+    }
     if (response.body !== null) {
         yield promises_2.default.pipeline(response.body, tempFile);
     }
