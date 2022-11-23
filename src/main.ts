@@ -1,5 +1,6 @@
 import * as core from "@actions/core";
 import Joi from "joi";
+import fsPromises from "fs/promises";
 
 import { getParams, Params } from "./params";
 import { getSubmissions } from "./repo";
@@ -117,6 +118,8 @@ const upload = async ({
           prefix: params.s3Prefix,
           mediaType: fileSubmission.mediaType,
         });
+
+        await fsPromises.unlink(downloadResult.path);
 
         filesUploaded += 1;
       } else {

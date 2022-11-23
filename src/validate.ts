@@ -1,3 +1,4 @@
+import * as core from "@actions/core";
 import fsPromises from "fs/promises";
 import { downloadFile, headFile } from "./download";
 import { defaultAlgorithm, encodeMultihash, hashFile } from "./hash";
@@ -40,16 +41,22 @@ const computeFileValidationMap = async (
       continue;
 
     if (validation.multihash === undefined) {
+      core.info(`GET ${sourceUrl}`);
+
       const { path, mediaType } = await downloadFile(sourceUrl);
       const multihash = await hashFile(path, defaultAlgorithm);
+      await fsPromises.unlink(path);
 
       validation.multihash = encodeMultihash(multihash);
       validation.mediaType ??= mediaType;
     } else {
+      core.info(`HEAD ${sourceUrl}`);
       const { mediaType } = await headFile(sourceUrl);
 
       validation.mediaType ??= mediaType;
     }
+
+    core.info(`Successfully downloaded: ${sourceUrl}`);
   }
 
   return validationMap;
