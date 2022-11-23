@@ -766,7 +766,10 @@ exports.schema = joi_1.default.object({
         .min(joi_1.default.ref("...fromYear", { adjust: decadeFromYear }))
         .max(joi_1.default.ref("...toYear", { adjust: decadeFromYear })))
         .default([]),
-    aliases: joi_1.default.array().unique().items(joi_1.default.link("/slug")).default([]),
+    aliases: joi_1.default.array()
+        .unique()
+        .items(joi_1.default.string().pattern(urlSlugPattern).min(12).max(64).empty(""))
+        .default([]),
 });
 
 
