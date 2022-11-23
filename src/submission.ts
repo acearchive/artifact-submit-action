@@ -84,6 +84,7 @@ export const toApi = (
       mediaType: fileInput.mediaType,
       hash: encodedHashFromMultihash(multihash),
       hashAlgorithm: algorithmName(multihash.code),
+      multihash: fileInput.multihash,
       storageKey: keyFromMultihash({
         prefix: params.s3Prefix,
         multihash: fileInput.multihash,
