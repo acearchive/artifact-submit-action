@@ -39,13 +39,19 @@ export const putArtifactMetadata = async ({
   namespace: string;
   artifact: Artifact;
 }): Promise<void> => {
-  await putKey({
-    accountId,
-    secretToken,
-    namespace,
-    key: `artifacts:v${version}:${artifact.slug}`,
-    obj: artifact,
-  });
+  // Duplicate the artifact metadata for each artifact slug alias so that it is
+  // accessible from previous URLs as well.
+  await Promise.all(
+    [artifact.slug, ...artifact.aliases].map((slug) => {
+      putKey({
+        accountId,
+        secretToken,
+        namespace,
+        key: `artifacts:v${version}:${slug}`,
+        obj: artifact,
+      });
+    })
+  );
 };
 
 export const putArtifactMetadataList = async ({
