@@ -1,7 +1,5 @@
 # artifact-submit-action
 
-🚧 This repository is under construction. 🚧
-
 This is a GitHub Action used to validate artifacts submitted to Ace Archive and
 upload submitted artifact files to the site.
 
