@@ -231,7 +231,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.putArtifactMetadataList = exports.putArtifactMetadata = void 0;
+exports.putArtifactMetadata = void 0;
 const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
 const api_1 = __nccwpck_require__(88947);
 const putKey = ({ accountId, secretToken, namespace, key, obj, }) => __awaiter(void 0, void 0, void 0, function* () {
@@ -245,25 +245,19 @@ const putKey = ({ accountId, secretToken, namespace, key, obj, }) => __awaiter(v
     });
 });
 const putArtifactMetadata = ({ accountId, secretToken, namespace, artifact, }) => __awaiter(void 0, void 0, void 0, function* () {
-    yield putKey({
-        accountId,
-        secretToken,
-        namespace,
-        key: `artifacts:v${api_1.version}:${artifact.slug}`,
-        obj: artifact,
-    });
+    // Duplicate the artifact metadata for each artifact slug alias so that it is
+    // accessible from previous URLs as well.
+    for (const slug of [artifact.slug, ...artifact.aliases]) {
+        yield putKey({
+            accountId,
+            secretToken,
+            namespace,
+            key: `artifacts:v${api_1.version}:${slug}`,
+            obj: artifact,
+        });
+    }
 });
 exports.putArtifactMetadata = putArtifactMetadata;
-const putArtifactMetadataList = ({ accountId, secretToken, namespace, artifacts, }) => __awaiter(void 0, void 0, void 0, function* () {
-    yield putKey({
-        accountId,
-        secretToken,
-        namespace,
-        key: `artifacts:v${api_1.version}`,
-        obj: artifacts,
-    });
-});
-exports.putArtifactMetadataList = putArtifactMetadataList;
 
 
 /***/ }),
@@ -392,12 +386,6 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
         });
         core.info(`Wrote artifact metadata: ${submission.slug}`);
     }
-    yield (0, kv_1.putArtifactMetadataList)({
-        accountId: params.cloudflareAccountId,
-        secretToken: params.cloudflareApiToken,
-        namespace: params.kvNamespaceId,
-        artifacts: artifactMetadataList,
-    });
     core.setOutput("artifacts", artifactMetadataList);
     core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
     core.info(`Uploaded ${filesUploaded} files to S3.`);
