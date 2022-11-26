@@ -47,6 +47,7 @@
     "@aws-sdk/client-s3": "^3.181.0",
     "content-type": "^1.0.4",
     "hasha": "^5.2.2",
+    "iso-639-1": "^2.1.15",
     "joi": "^17.6.2",
     "multiformats": "^9.9.0",
     "node-fetch": "^3.2.10"

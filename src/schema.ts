@@ -1,4 +1,5 @@
 import Joi from "joi";
+import ISO6391 from "iso-639-1";
 
 export const version = 1;
 
@@ -48,6 +49,9 @@ export const schema = Joi.object({
           .uri({ scheme: ["http", "https"] })
           .empty("")
           .required(),
+        lang: Joi.string()
+          .equal(...ISO6391.getAllCodes())
+          .empty(""),
         hidden: Joi.bool().default(false),
         aliases: Joi.array()
           .unique()

@@ -1,3 +1,5 @@
+import { LanguageCode } from "iso-639-1";
+
 export const version = 1;
 
 export type ArtifactFile = Readonly<{
@@ -9,6 +11,7 @@ export type ArtifactFile = Readonly<{
   multihash: string;
   storageKey: string;
   url: string;
+  lang?: LanguageCode;
   hidden: boolean;
   aliases: ReadonlyArray<string>;
 }>;

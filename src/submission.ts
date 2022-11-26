@@ -7,6 +7,7 @@ import {
 } from "./hash";
 import { Params } from "./params";
 import { keyFromMultihash } from "./s3";
+import { LanguageCode } from "iso-639-1";
 
 export type JsonValue =
   | string
@@ -24,6 +25,7 @@ export type ArtifactFileSubmission = Readonly<{
   mediaType?: string;
   multihash?: string;
   sourceUrl: URL;
+  lang?: LanguageCode;
   hidden: boolean;
   aliases: ReadonlyArray<string>;
 }>;
@@ -94,6 +96,7 @@ export const toApi = (
         path.posix.join("artifacts", input.slug, fileInput.fileName),
         params.baseUrl
       ).toString(),
+      lang: fileInput.lang,
       hidden: fileInput.hidden,
       aliases: fileInput.aliases,
     };
