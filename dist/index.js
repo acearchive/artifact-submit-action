@@ -946,13 +946,18 @@ const completeFileDetails = (submissions) => __awaiter(void 0, void 0, void 0, f
 });
 const applyFileDetails = (files, detailsMap) => __awaiter(void 0, void 0, void 0, function* () {
     return files.map((fileSubmission) => {
-        const details = detailsMap.get(fileSubmission.sourceUrl);
-        if (details === undefined) {
-            throw new Error(`Unexpected file source URL: ${fileSubmission.sourceUrl}`);
+        const currentMultihash = fileSubmission.multihash;
+        const currentMediaType = fileSubmission.mediaType;
+        if (currentMultihash === undefined) {
+            const details = detailsMap.get(fileSubmission.sourceUrl);
+            if (details === undefined) {
+                throw new Error(`Unexpected file URL: ${fileSubmission.sourceUrl}\nThis is most likely a bug.`);
+            }
+            return Object.assign(Object.assign({}, fileSubmission), { mediaType: currentMediaType !== null && currentMediaType !== void 0 ? currentMediaType : details.mediaType, multihash: details.multihash });
         }
-        const { multihash, mediaType } = details;
-        return Object.assign(Object.assign({}, fileSubmission), { mediaType,
-            multihash });
+        else {
+            return Object.assign(Object.assign({}, fileSubmission), { multihash: currentMultihash });
+        }
     });
 });
 // Make "incomplete" artifact submissions "complete" by:
