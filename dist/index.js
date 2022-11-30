@@ -350,7 +350,7 @@ const validate = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0,
     // set the media type for file submissions which don't have one if the GET or
     // HEAD response returns a `Content-Type` header.
     const completedSubmissions = yield (0, validate_1.completeArtifactSubmissions)(submissions);
-    yield (0, validate_1.writeFileSubmissions)(completedSubmissions, params);
+    yield (0, validate_1.writeArtifactSubmissions)(completedSubmissions, params);
 });
 const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
     core.info("Starting the upload process...");
@@ -411,6 +411,7 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const params = (0, params_1.getParams)();
     const rawSubmissions = yield (0, repo_1.getSubmissions)(params.repo, params.path);
+    const setOfAllSlugs = (0, validate_1.allSlugsInSubmissions)(rawSubmissions);
     core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
     const submissions = new Array();
     for (const { json, fileName } of rawSubmissions) {
@@ -419,7 +420,8 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             convert: false,
             context: {
                 mode: params.mode,
-                slug: path_1.default.parse(fileName).name,
+                slugFromFileName: path_1.default.parse(fileName).name,
+                setOfAllSlugs,
             },
         }));
     }
@@ -713,13 +715,13 @@ exports.schema = joi_1.default.object({
     id: joi_1.default.string()
         .pattern(/^[a-zA-Z0-9]+$/)
         .length(id_1.artifactIdLength)
-        .empty("")
-        .required(),
+        .empty(""),
     slug: joi_1.default.string()
         .pattern(urlSlugPattern)
         .min(12)
         .max(64)
-        .equal(joi_1.default.ref("$slug"))
+        .equal(joi_1.default.ref("$slugFromFileName"))
+        .not(joi_1.default.in("$setOfAllSlugs"))
         .empty("")
         .required(),
     title: joi_1.default.string().trim().max(100).empty("").required(),
@@ -891,7 +893,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.writeFileSubmissions = exports.completeArtifactSubmissions = void 0;
+exports.allSlugsInSubmissions = exports.writeArtifactSubmissions = exports.completeArtifactSubmissions = void 0;
 const core = __importStar(__nccwpck_require__(42186));
 const promises_1 = __importDefault(__nccwpck_require__(73292));
 const download_1 = __nccwpck_require__(95933);
@@ -953,6 +955,12 @@ const applyFileDetails = (files, detailsMap) => __awaiter(void 0, void 0, void 0
             multihash });
     });
 });
+// Make "incomplete" artifact submissions "complete" by:
+// - Generating a random artifact ID for each artifact that doesn't already
+//   have one.
+// - Downloading files from their source URLs to get the IANA media type from
+//   the origin server and calculate the hash, but only if the file doesn't
+//   already have those fields in the submission.
 const completeArtifactSubmissions = (submissions) => Promise.all(submissions.map((incompleteSubmission) => __awaiter(void 0, void 0, void 0, function* () {
     const fileDetailsMap = yield completeFileDetails(submissions);
     return Object.assign(Object.assign({}, incompleteSubmission), { id: incompleteSubmission.id === undefined
@@ -960,7 +968,8 @@ const completeArtifactSubmissions = (submissions) => Promise.all(submissions.map
             : incompleteSubmission.id, files: yield applyFileDetails(incompleteSubmission.files, fileDetailsMap) });
 })));
 exports.completeArtifactSubmissions = completeArtifactSubmissions;
-const writeFileSubmissions = (submissions, params) => __awaiter(void 0, void 0, void 0, function* () {
+// Write "complete" artifact submissions to the local clone of the git repo.
+const writeArtifactSubmissions = (submissions, params) => __awaiter(void 0, void 0, void 0, function* () {
     for (const submission of submissions) {
         const submissionPath = (0, repo_1.getSubmissionPath)({
             repoPath: params.repo,
@@ -970,7 +979,30 @@ const writeFileSubmissions = (submissions, params) => __awaiter(void 0, void 0, 
         yield promises_1.default.writeFile(submissionPath, JSON.stringify(submission, null, jsonPrettyPrintIndent));
     }
 });
-exports.writeFileSubmissions = writeFileSubmissions;
+exports.writeArtifactSubmissions = writeArtifactSubmissions;
+// Get a set of all the artifact slugs and artifact slug aliases in all the
+// given submissions. This is used before schema validation so that the set of
+// artifact slugs can be passed into the schema validator to validate that
+// artifact slugs are unique.
+const allSlugsInSubmissions = (submissions) => {
+    const allSlugs = new Set();
+    for (const { json: rawSubmission } of submissions) {
+        const slug = rawSubmission["slug"];
+        const aliases = rawSubmission["aliases"];
+        // If any of these manual type checks fail, the schema validation will fail
+        // anyways, so it doesn't matter that we're silently skipping them.
+        if (typeof slug !== "string" || !Array.isArray(aliases))
+            continue;
+        allSlugs.add(slug);
+        for (const alias of aliases) {
+            if (typeof alias === "string") {
+                allSlugs.add(alias);
+            }
+        }
+    }
+    return allSlugs;
+};
+exports.allSlugsInSubmissions = allSlugsInSubmissions;
 
 
 /***/ }),
