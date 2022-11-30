@@ -19,8 +19,7 @@ export const schema = Joi.object({
   id: Joi.string()
     .pattern(/^[a-zA-Z0-9]+$/)
     .length(artifactIdLength)
-    .empty("")
-    .required(),
+    .empty(""),
   slug: Joi.string()
     .pattern(urlSlugPattern)
     .min(12)

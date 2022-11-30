@@ -1,18 +1,6 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 88947:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.version = void 0;
-exports.version = 1;
-
-
-/***/ }),
-
 /***/ 95933:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -213,6 +201,33 @@ exports.defaultAlgorithm = sha2_256;
 
 /***/ }),
 
+/***/ 33064:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.newRandomArtifactID = exports.artifactIdLength = void 0;
+const lowerAlphaPool = "abcdefghijklmnopqrstuvwxyz";
+const upperAlphaPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const numberPool = "0123456789";
+const artifactIdPool = lowerAlphaPool + upperAlphaPool + numberPool;
+exports.artifactIdLength = 12;
+// This random ID DOES NOT need to be cryptographically secure. It only needs to
+// be reasonably collision-resistant.
+const newRandomArtifactID = () => {
+    let artifactId = "";
+    for (let i = 0; i < exports.artifactIdLength; i++) {
+        const randomNum = Math.floor(Math.random() * artifactIdPool.length);
+        artifactId += artifactIdPool[randomNum];
+    }
+    return artifactId;
+};
+exports.newRandomArtifactID = newRandomArtifactID;
+
+
+/***/ }),
+
 /***/ 18116:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -231,33 +246,43 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.putArtifactMetadata = void 0;
+exports.putArtifact = void 0;
 const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
-const api_1 = __nccwpck_require__(88947);
-const putKey = ({ accountId, secretToken, namespace, key, obj, }) => __awaiter(void 0, void 0, void 0, function* () {
-    yield (0, node_fetch_1.default)(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/values/${key}`, {
+const Version = {
+    artifacts: 2,
+    slugs: 1,
+};
+const putKeys = ({ accountId, secretToken, namespace, objects, }) => __awaiter(void 0, void 0, void 0, function* () {
+    yield (0, node_fetch_1.default)(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/bulk`, {
         method: "PUT",
         headers: {
             Authorization: `Bearer ${secretToken}`,
             ["Content-Type"]: "application/json",
         },
-        body: JSON.stringify(obj),
+        body: JSON.stringify(objects.map((obj) => (Object.assign({ key: obj.key, value: obj.obj === undefined ? "" : JSON.stringify(obj.obj) }, (obj.metadata !== undefined && { metadata: obj.metadata }))))),
     });
 });
-const putArtifactMetadata = ({ accountId, secretToken, namespace, artifact, }) => __awaiter(void 0, void 0, void 0, function* () {
-    // Duplicate the artifact metadata for each artifact slug alias so that it is
-    // accessible from previous URLs as well.
-    for (const slug of [artifact.slug, ...artifact.aliases]) {
-        yield putKey({
-            accountId,
-            secretToken,
-            namespace,
-            key: `artifacts:v${api_1.version}:${slug}`,
+const putArtifact = ({ accountId, secretToken, namespace, artifact, }) => __awaiter(void 0, void 0, void 0, function* () {
+    const objects = [
+        {
+            key: `artifacts:v${Version.artifacts}:${artifact.id}`,
             obj: artifact,
-        });
-    }
+        },
+        ...[artifact.slug, ...artifact.aliases].map((slug) => ({
+            key: `slugs:v${Version.slugs}:${slug}`,
+            metadata: {
+                id: artifact.id,
+            },
+        })),
+    ];
+    yield putKeys({
+        accountId,
+        secretToken,
+        namespace,
+        objects,
+    });
 });
-exports.putArtifactMetadata = putArtifactMetadata;
+exports.putArtifact = putArtifact;
 
 
 /***/ }),
@@ -317,22 +342,15 @@ const s3_1 = __nccwpck_require__(81863);
 const submission_1 = __nccwpck_require__(16307);
 const validate_1 = __nccwpck_require__(81997);
 const validate = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
+    core.info("Adding IDs to new artifacts...");
     core.info("Updating file submissions missing hashes or media types...");
+    // Add an artifact ID to artifacts which don't have one yet (new artifacts).
+    //
     // Calculate the multihash for file submissions which don't have one and also
     // set the media type for file submissions which don't have one if the GET or
     // HEAD response returns a `Content-Type` header.
-    const updatedSubmissions = yield (0, validate_1.upadateFileSubmissions)(submissions);
-    yield (0, validate_1.writeFileSubmissions)(updatedSubmissions, params);
-    const { filesUpdatedByArtifact, artifactsUpdated, totalFilesUpdated } = (0, validate_1.getFileSubmissionUpdateStats)(submissions, updatedSubmissions);
-    core.info(`Updated ${totalFilesUpdated} file submissions in ${artifactsUpdated} artifact submissions.`);
-    if (totalFilesUpdated > 0) {
-        core.info("Updated these file submissions:");
-        for (const [artifactSlug, fileNameSet,] of filesUpdatedByArtifact.entries()) {
-            for (const fileName of fileNameSet) {
-                core.info(`  ${artifactSlug}/${fileName}`);
-            }
-        }
-    }
+    const completedSubmissions = yield (0, validate_1.completeArtifactSubmissions)(submissions);
+    yield (0, validate_1.writeFileSubmissions)(completedSubmissions, params);
 });
 const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
     core.info("Starting the upload process...");
@@ -378,7 +396,7 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
         }
         const artifactMetadata = (0, submission_1.toApi)(submission, params);
         artifactMetadataList.push(artifactMetadata);
-        yield (0, kv_1.putArtifactMetadata)({
+        yield (0, kv_1.putArtifact)({
             accountId: params.cloudflareAccountId,
             secretToken: params.cloudflareApiToken,
             namespace: params.kvNamespaceId,
@@ -682,6 +700,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.schema = exports.version = void 0;
 const joi_1 = __importDefault(__nccwpck_require__(20918));
 const iso_639_1_1 = __importDefault(__nccwpck_require__(88772));
+const id_1 = __nccwpck_require__(33064);
 exports.version = 1;
 const urlSlugPattern = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const fileNamePattern = /^[a-z0-9][a-z0-9-]*[a-z0-9](\/[a-z0-9][a-z0-9-]*[a-z0-9])*(\.[a-z0-9]+)*$/;
@@ -691,6 +710,11 @@ const decadeFromYear = (year) => year - (year % 10);
 // `acearchive/acearchive.lgbt` repo.
 exports.schema = joi_1.default.object({
     version: joi_1.default.number().integer().equal(exports.version).required(),
+    id: joi_1.default.string()
+        .pattern(/^[a-zA-Z0-9]+$/)
+        .length(id_1.artifactIdLength)
+        .empty("")
+        .required(),
     slug: joi_1.default.string()
         .pattern(urlSlugPattern)
         .min(12)
@@ -780,9 +804,11 @@ exports.toApi = exports.isSubmissionValidated = void 0;
 const path_1 = __importDefault(__nccwpck_require__(71017));
 const hash_1 = __nccwpck_require__(41859);
 const s3_1 = __nccwpck_require__(81863);
-const isSubmissionValidated = (submission) => submission.files.every((fileSubmission) => fileSubmission.multihash !== undefined);
+const isSubmissionValidated = (submission) => submission.id !== undefined &&
+    submission.files.every((fileSubmission) => fileSubmission.multihash !== undefined);
 exports.isSubmissionValidated = isSubmissionValidated;
 const toApi = (input, params) => ({
+    id: input.id,
     slug: input.slug,
     title: input.title,
     summary: input.summary,
@@ -865,90 +891,75 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.writeFileSubmissions = exports.getFileSubmissionUpdateStats = exports.upadateFileSubmissions = void 0;
+exports.writeFileSubmissions = exports.completeArtifactSubmissions = void 0;
 const core = __importStar(__nccwpck_require__(42186));
 const promises_1 = __importDefault(__nccwpck_require__(73292));
 const download_1 = __nccwpck_require__(95933);
 const hash_1 = __nccwpck_require__(41859);
+const id_1 = __nccwpck_require__(33064);
 const repo_1 = __nccwpck_require__(58139);
 // To avoid unnecessary noise in the git diffs, this should match the
 // indentation used for pretty-printing the submission JSON in the artifact
 // submission form in the `acearchive/acearchive.lgbt` repo.
 const jsonPrettyPrintIndent = 2;
-const computeFileValidationMap = (submissions) => __awaiter(void 0, void 0, void 0, function* () {
+const completeFileDetails = (submissions) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
-    const validationMap = new Map(submissions.flatMap(({ files }) => files.map(({ sourceUrl, multihash, mediaType }) => [
+    const incompleteDetailsMap = new Map(submissions.flatMap(({ files }) => files.map(({ sourceUrl, multihash, mediaType }) => [
         sourceUrl,
         {
             multihash,
             mediaType,
         },
     ])));
-    for (const [sourceUrl, validation] of validationMap) {
-        if (validation.mediaType !== undefined &&
-            validation.multihash !== undefined)
+    const completeDetailsMap = new Map();
+    for (const [sourceUrl, incompleteDetails] of incompleteDetailsMap) {
+        if (incompleteDetails.mediaType !== undefined &&
+            incompleteDetails.multihash !== undefined)
             continue;
-        if (validation.multihash === undefined) {
+        if (incompleteDetails.multihash === undefined) {
             core.info(`GET ${sourceUrl}`);
             const { path, mediaType } = yield (0, download_1.downloadFile)(sourceUrl);
             const multihash = yield (0, hash_1.hashFile)(path, hash_1.defaultAlgorithm);
             yield promises_1.default.unlink(path);
-            validation.multihash = (0, hash_1.encodeMultihash)(multihash);
-            (_a = validation.mediaType) !== null && _a !== void 0 ? _a : (validation.mediaType = mediaType);
+            const completeDetails = {
+                multihash: (0, hash_1.encodeMultihash)(multihash),
+                mediaType: incompleteDetails.mediaType,
+            };
+            (_a = completeDetails.mediaType) !== null && _a !== void 0 ? _a : (completeDetails.mediaType = mediaType);
+            completeDetailsMap.set(sourceUrl, completeDetails);
         }
         else {
             core.info(`HEAD ${sourceUrl}`);
             const { mediaType } = yield (0, download_1.headFile)(sourceUrl);
-            (_b = validation.mediaType) !== null && _b !== void 0 ? _b : (validation.mediaType = mediaType);
+            const completeDetails = {
+                multihash: incompleteDetails.multihash,
+                mediaType: incompleteDetails.mediaType,
+            };
+            (_b = completeDetails.mediaType) !== null && _b !== void 0 ? _b : (completeDetails.mediaType = mediaType);
+            completeDetailsMap.set(sourceUrl, completeDetails);
         }
         core.info(`Successfully downloaded: ${sourceUrl}`);
     }
-    return validationMap;
+    return completeDetailsMap;
 });
-const applyFileValidationMap = (submissions, validationMap) => __awaiter(void 0, void 0, void 0, function* () {
-    return submissions.map((submission) => (Object.assign(Object.assign({}, submission), { files: submission.files.map((fileSubmission) => {
-            var _a;
-            const { mediaType, multihash } = (_a = validationMap.get(fileSubmission.sourceUrl)) !== null && _a !== void 0 ? _a : { mediaType: undefined, multihash: undefined };
-            return Object.assign(Object.assign({}, fileSubmission), { mediaType,
-                multihash });
-        }) })));
-});
-const upadateFileSubmissions = (submissions) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield applyFileValidationMap(submissions, yield computeFileValidationMap(submissions));
-});
-exports.upadateFileSubmissions = upadateFileSubmissions;
-const getFileSubmissionUpdateStats = (oldSubmissions, newSubmissions) => {
-    const filesUpdatedByArtifact = new Map();
-    let artifactsUpdated = 0;
-    let totalFilesUpdated = 0;
-    const newSubmissionsBySlug = new Map(newSubmissions.map((submission) => [submission.slug, submission]));
-    for (const oldSubmission of oldSubmissions) {
-        const newSubmission = newSubmissionsBySlug.get(oldSubmission.slug);
-        if (newSubmission === undefined)
-            continue;
-        const newFileSubmissionsByFileName = new Map(newSubmission.files.map((fileSubmission) => [
-            fileSubmission.fileName,
-            fileSubmission,
-        ]));
-        const updatedFileSet = new Set();
-        for (const oldFileSubmission of oldSubmission.files) {
-            const newFileSubmission = newFileSubmissionsByFileName.get(oldFileSubmission.fileName);
-            if (newFileSubmission === undefined)
-                continue;
-            if (oldFileSubmission.mediaType !== newFileSubmission.mediaType ||
-                oldFileSubmission.multihash !== newFileSubmission.multihash) {
-                totalFilesUpdated += 1;
-                updatedFileSet.add(oldFileSubmission.fileName);
-            }
+const applyFileDetails = (files, detailsMap) => __awaiter(void 0, void 0, void 0, function* () {
+    return files.map((fileSubmission) => {
+        const details = detailsMap.get(fileSubmission.sourceUrl);
+        if (details === undefined) {
+            throw new Error(`Unexpected file source URL: ${fileSubmission.sourceUrl}`);
         }
-        if (updatedFileSet.size > 0) {
-            artifactsUpdated += 1;
-        }
-        filesUpdatedByArtifact.set(oldSubmission.slug, updatedFileSet);
-    }
-    return { filesUpdatedByArtifact, artifactsUpdated, totalFilesUpdated };
-};
-exports.getFileSubmissionUpdateStats = getFileSubmissionUpdateStats;
+        const { multihash, mediaType } = details;
+        return Object.assign(Object.assign({}, fileSubmission), { mediaType,
+            multihash });
+    });
+});
+const completeArtifactSubmissions = (submissions) => Promise.all(submissions.map((incompleteSubmission) => __awaiter(void 0, void 0, void 0, function* () {
+    const fileDetailsMap = yield completeFileDetails(submissions);
+    return Object.assign(Object.assign({}, incompleteSubmission), { id: incompleteSubmission.id === undefined
+            ? (0, id_1.newRandomArtifactID)()
+            : incompleteSubmission.id, files: yield applyFileDetails(incompleteSubmission.files, fileDetailsMap) });
+})));
+exports.completeArtifactSubmissions = completeArtifactSubmissions;
 const writeFileSubmissions = (submissions, params) => __awaiter(void 0, void 0, void 0, function* () {
     for (const submission of submissions) {
         const submissionPath = (0, repo_1.getSubmissionPath)({
