@@ -97,21 +97,29 @@ const applyFileDetails = async (
   detailsMap: CompleteFileDetailsMap
 ): Promise<ReadonlyArray<CompleteFileSubmission>> =>
   files.map((fileSubmission) => {
-    const details = detailsMap.get(fileSubmission.sourceUrl);
+    const currentMultihash = fileSubmission.multihash;
+    const currentMediaType = fileSubmission.mediaType;
 
-    if (details === undefined) {
-      throw new Error(
-        `Unexpected file source URL: ${fileSubmission.sourceUrl}`
-      );
+    if (currentMultihash === undefined) {
+      const details = detailsMap.get(fileSubmission.sourceUrl);
+
+      if (details === undefined) {
+        throw new Error(
+          `Unexpected file URL: ${fileSubmission.sourceUrl}\nThis is most likely a bug.`
+        );
+      }
+
+      return {
+        ...fileSubmission,
+        mediaType: currentMediaType ?? details.mediaType,
+        multihash: details.multihash,
+      };
+    } else {
+      return {
+        ...fileSubmission,
+        multihash: currentMultihash,
+      };
     }
-
-    const { multihash, mediaType } = details;
-
-    return {
-      ...fileSubmission,
-      mediaType,
-      multihash,
-    };
   });
 
 // Make "incomplete" artifact submissions "complete" by:
