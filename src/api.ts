@@ -1,7 +1,5 @@
 import { LanguageCode } from "iso-639-1";
 
-export const version = 1;
-
 export type ArtifactFile = Readonly<{
   name: string;
   fileName: string;
@@ -22,6 +20,7 @@ export type ArtifactLink = Readonly<{
 }>;
 
 export type Artifact = Readonly<{
+  id: string;
   slug: string;
   title: string;
   summary: string;

@@ -7,51 +7,34 @@ import { getParams, Params } from "./params";
 import { getSubmissions } from "./repo";
 import { schema } from "./schema";
 import { downloadAndVerify } from "./download";
-import { putArtifactMetadata } from "./kv";
+import { putArtifact } from "./kv";
 import { debugPrintDigest, decodeMultihash } from "./hash";
 import { listMultihashes, newClient, putArtifactFile } from "./s3";
-import { ArtifactSubmission, isSubmissionValidated, toApi } from "./submission";
-import { Artifact } from "./api";
 import {
-  getFileSubmissionUpdateStats,
-  upadateFileSubmissions,
-  writeFileSubmissions,
-} from "./validate";
+  IncompleteArtifactSubmission,
+  isSubmissionValidated,
+  toApi,
+} from "./submission";
+import { Artifact } from "./api";
+import { completeArtifactSubmissions, writeFileSubmissions } from "./validate";
 
 const validate = async ({
   params,
   submissions,
 }: {
   params: Params;
-  submissions: ReadonlyArray<ArtifactSubmission>;
+  submissions: ReadonlyArray<IncompleteArtifactSubmission>;
 }): Promise<void> => {
+  core.info("Adding IDs to new artifacts...");
   core.info("Updating file submissions missing hashes or media types...");
 
+  // Add an artifact ID to artifacts which don't have one yet (new artifacts).
+  //
   // Calculate the multihash for file submissions which don't have one and also
   // set the media type for file submissions which don't have one if the GET or
   // HEAD response returns a `Content-Type` header.
-  const updatedSubmissions = await upadateFileSubmissions(submissions);
-  await writeFileSubmissions(updatedSubmissions, params);
-
-  const { filesUpdatedByArtifact, artifactsUpdated, totalFilesUpdated } =
-    getFileSubmissionUpdateStats(submissions, updatedSubmissions);
-
-  core.info(
-    `Updated ${totalFilesUpdated} file submissions in ${artifactsUpdated} artifact submissions.`
-  );
-
-  if (totalFilesUpdated > 0) {
-    core.info("Updated these file submissions:");
-
-    for (const [
-      artifactSlug,
-      fileNameSet,
-    ] of filesUpdatedByArtifact.entries()) {
-      for (const fileName of fileNameSet) {
-        core.info(`  ${artifactSlug}/${fileName}`);
-      }
-    }
-  }
+  const completedSubmissions = await completeArtifactSubmissions(submissions);
+  await writeFileSubmissions(completedSubmissions, params);
 };
 
 const upload = async ({
@@ -59,7 +42,7 @@ const upload = async ({
   submissions,
 }: {
   params: Params;
-  submissions: ReadonlyArray<ArtifactSubmission>;
+  submissions: ReadonlyArray<IncompleteArtifactSubmission>;
 }): Promise<void> => {
   core.info("Starting the upload process...");
 
@@ -139,7 +122,7 @@ const upload = async ({
     const artifactMetadata = toApi(submission, params);
     artifactMetadataList.push(artifactMetadata);
 
-    await putArtifactMetadata({
+    await putArtifact({
       accountId: params.cloudflareAccountId,
       secretToken: params.cloudflareApiToken,
       namespace: params.kvNamespaceId,
@@ -162,7 +145,7 @@ const main = async (): Promise<void> => {
 
   core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
 
-  const submissions = new Array<ArtifactSubmission>();
+  const submissions = new Array<IncompleteArtifactSubmission>();
 
   for (const { json, fileName } of rawSubmissions) {
     submissions.push(

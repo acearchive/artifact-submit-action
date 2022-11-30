@@ -19,7 +19,7 @@ export type JsonValue =
 
 export type JsonObject = Readonly<Record<string, JsonValue>>;
 
-export type ArtifactFileSubmission = Readonly<{
+export type IncompleteFileSubmission = Readonly<{
   name: string;
   fileName: string;
   mediaType?: string;
@@ -30,11 +30,11 @@ export type ArtifactFileSubmission = Readonly<{
   aliases: ReadonlyArray<string>;
 }>;
 
-export type ValidatedFileSubmission = Omit<
-  ArtifactFileSubmission,
+export type CompleteFileSubmission = Omit<
+  IncompleteFileSubmission,
   "multihash"
 > & {
-  multihash: NonNullable<ArtifactFileSubmission["multihash"]>;
+  multihash: NonNullable<IncompleteFileSubmission["multihash"]>;
 };
 
 export type ArtifactLinkSubmission = Readonly<{
@@ -42,13 +42,14 @@ export type ArtifactLinkSubmission = Readonly<{
   url: URL;
 }>;
 
-export type ArtifactSubmission = Readonly<{
+export type IncompleteArtifactSubmission = Readonly<{
   version: number;
+  id?: string;
   slug: string;
   title: string;
   summary: string;
   description?: string;
-  files: ReadonlyArray<ArtifactFileSubmission>;
+  files: ReadonlyArray<IncompleteFileSubmission>;
   links: ReadonlyArray<ArtifactLinkSubmission>;
   people: ReadonlyArray<string>;
   identities: ReadonlyArray<string>;
@@ -58,21 +59,27 @@ export type ArtifactSubmission = Readonly<{
   aliases: ReadonlyArray<string>;
 }>;
 
-export type ValidatedArtifactSubmission = Omit<ArtifactSubmission, "files"> & {
-  files: ReadonlyArray<ValidatedFileSubmission>;
+export type CompleteArtifactSubmission = Omit<
+  IncompleteArtifactSubmission,
+  "id" | "files"
+> & {
+  id: string;
+  files: ReadonlyArray<CompleteFileSubmission>;
 };
 
 export const isSubmissionValidated = (
-  submission: ArtifactSubmission
-): submission is ValidatedArtifactSubmission =>
+  submission: IncompleteArtifactSubmission
+): submission is CompleteArtifactSubmission =>
+  submission.id !== undefined &&
   submission.files.every(
     (fileSubmission) => fileSubmission.multihash !== undefined
   );
 
 export const toApi = (
-  input: ValidatedArtifactSubmission,
+  input: CompleteArtifactSubmission,
   params: Params
 ): Artifact => ({
+  id: input.id,
   slug: input.slug,
   title: input.title,
   summary: input.summary,

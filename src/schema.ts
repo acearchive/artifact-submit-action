@@ -1,5 +1,6 @@
 import Joi from "joi";
 import ISO6391 from "iso-639-1";
+import { artifactIdLength } from "./id";
 
 export const version = 1;
 
@@ -15,6 +16,11 @@ const decadeFromYear = (year: number): number => year - (year % 10);
 // `acearchive/acearchive.lgbt` repo.
 export const schema = Joi.object({
   version: Joi.number().integer().equal(version).required(),
+  id: Joi.string()
+    .pattern(/^[a-zA-Z0-9]+$/)
+    .length(artifactIdLength)
+    .empty("")
+    .required(),
   slug: Joi.string()
     .pattern(urlSlugPattern)
     .min(12)
