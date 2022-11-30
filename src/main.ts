@@ -16,7 +16,11 @@ import {
   toApi,
 } from "./submission";
 import { Artifact } from "./api";
-import { completeArtifactSubmissions, writeFileSubmissions } from "./validate";
+import {
+  allSlugsInSubmissions,
+  completeArtifactSubmissions,
+  writeArtifactSubmissions,
+} from "./validate";
 
 const validate = async ({
   params,
@@ -34,7 +38,7 @@ const validate = async ({
   // set the media type for file submissions which don't have one if the GET or
   // HEAD response returns a `Content-Type` header.
   const completedSubmissions = await completeArtifactSubmissions(submissions);
-  await writeFileSubmissions(completedSubmissions, params);
+  await writeArtifactSubmissions(completedSubmissions, params);
 };
 
 const upload = async ({
@@ -142,6 +146,7 @@ const upload = async ({
 const main = async (): Promise<void> => {
   const params = getParams();
   const rawSubmissions = await getSubmissions(params.repo, params.path);
+  const setOfAllSlugs = allSlugsInSubmissions(rawSubmissions);
 
   core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
 
@@ -154,7 +159,8 @@ const main = async (): Promise<void> => {
         convert: false,
         context: {
           mode: params.mode,
-          slug: path.parse(fileName).name,
+          slugFromFileName: path.parse(fileName).name,
+          setOfAllSlugs,
         },
       })
     );

@@ -24,7 +24,8 @@ export const schema = Joi.object({
     .pattern(urlSlugPattern)
     .min(12)
     .max(64)
-    .equal(Joi.ref("$slug"))
+    .equal(Joi.ref("$slugFromFileName"))
+    .not(Joi.in("$setOfAllSlugs"))
     .empty("")
     .required(),
   title: Joi.string().trim().max(100).empty("").required(),

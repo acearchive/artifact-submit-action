@@ -4,7 +4,7 @@ import { downloadFile, headFile } from "./download";
 import { defaultAlgorithm, encodeMultihash, hashFile } from "./hash";
 import { newRandomArtifactID } from "./id";
 import { Params } from "./params";
-import { getSubmissionPath } from "./repo";
+import { getSubmissionPath, RawSubmission } from "./repo";
 import {
   IncompleteArtifactSubmission,
   CompleteArtifactSubmission,
@@ -114,6 +114,12 @@ const applyFileDetails = async (
     };
   });
 
+// Make "incomplete" artifact submissions "complete" by:
+// - Generating a random artifact ID for each artifact that doesn't already
+//   have one.
+// - Downloading files from their source URLs to get the IANA media type from
+//   the origin server and calculate the hash, but only if the file doesn't
+//   already have those fields in the submission.
 export const completeArtifactSubmissions = (
   submissions: ReadonlyArray<IncompleteArtifactSubmission>
 ): Promise<ReadonlyArray<CompleteArtifactSubmission>> =>
@@ -135,7 +141,8 @@ export const completeArtifactSubmissions = (
     })
   );
 
-export const writeFileSubmissions = async (
+// Write "complete" artifact submissions to the local clone of the git repo.
+export const writeArtifactSubmissions = async (
   submissions: ReadonlyArray<CompleteArtifactSubmission>,
   params: Params
 ): Promise<void> => {
@@ -151,4 +158,33 @@ export const writeFileSubmissions = async (
       JSON.stringify(submission, null, jsonPrettyPrintIndent)
     );
   }
+};
+
+// Get a set of all the artifact slugs and artifact slug aliases in all the
+// given submissions. This is used before schema validation so that the set of
+// artifact slugs can be passed into the schema validator to validate that
+// artifact slugs are unique.
+export const allSlugsInSubmissions = (
+  submissions: ReadonlyArray<RawSubmission>
+): Set<string> => {
+  const allSlugs = new Set<string>();
+
+  for (const { json: rawSubmission } of submissions) {
+    const slug = rawSubmission["slug"];
+    const aliases = rawSubmission["aliases"];
+
+    // If any of these manual type checks fail, the schema validation will fail
+    // anyways, so it doesn't matter that we're silently skipping them.
+    if (typeof slug !== "string" || !Array.isArray(aliases)) continue;
+
+    allSlugs.add(slug);
+
+    for (const alias of aliases) {
+      if (typeof alias === "string") {
+        allSlugs.add(alias);
+      }
+    }
+  }
+
+  return allSlugs;
 };
