@@ -1,5 +1,17 @@
 import { LanguageCode } from "iso-639-1";
 
+// These type definitions represent the shape of the objects stored in KV.
+//
+// Currently, these type definitions are duplicated verbatim across several
+// repos. If you edit one of these types here, they need to be updated in these
+// repos as well:
+//
+// - `acearchive/files-worker`
+// - `acearchive/api-worker`
+//
+// TODO: Use Node `github:` dependencies to import these type definitions from
+// this repo in other repos.
+
 export type ArtifactFile = Readonly<{
   name: string;
   fileName: string;
