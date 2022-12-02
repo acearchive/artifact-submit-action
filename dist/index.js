@@ -246,13 +246,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.putArtifact = void 0;
+exports.putArtifacts = void 0;
 const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
 const Version = {
     artifacts: 2,
     slugs: 1,
 };
 const putKeys = ({ accountId, secretToken, namespace, objects, }) => __awaiter(void 0, void 0, void 0, function* () {
+    // As of time of writing, the bulk API is documented to accept up to 10,000 KV
+    // pairs at once, with a maximum total request size of 100MB. For simplicity's
+    // sake, we do not attempt to batch multiple bulk API calls and work under the
+    // assumption that we will never exceed these limits.
     yield (0, node_fetch_1.default)(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/bulk`, {
         method: "PUT",
         headers: {
@@ -262,19 +266,41 @@ const putKeys = ({ accountId, secretToken, namespace, objects, }) => __awaiter(v
         body: JSON.stringify(objects.map((obj) => (Object.assign({ key: obj.key, value: obj.obj === undefined ? "" : JSON.stringify(obj.obj) }, (obj.metadata !== undefined && { metadata: obj.metadata }))))),
     });
 });
-const putArtifact = ({ accountId, secretToken, namespace, artifact, }) => __awaiter(void 0, void 0, void 0, function* () {
-    const objects = [
-        {
-            key: `artifacts:v${Version.artifacts}:${artifact.id}`,
+const artifactListKey = `artifacts:v${Version.artifacts}:`;
+const artifactKey = (artifactId) => `artifacts:v${Version.artifacts}:${artifactId}`;
+const slugKey = (slug) => `slugs:v${Version.slugs}:${slug}`;
+const putArtifacts = ({ accountId, secretToken, namespace, artifacts, }) => __awaiter(void 0, void 0, void 0, function* () {
+    const objects = [];
+    for (const artifact of artifacts) {
+        objects.push({
+            key: artifactKey(artifact.id),
             obj: artifact,
-        },
-        ...[artifact.slug, ...artifact.aliases].map((slug) => ({
-            key: `slugs:v${Version.slugs}:${slug}`,
+        });
+        objects.push({
+            key: slugKey(artifact.slug),
             metadata: {
                 id: artifact.id,
             },
-        })),
-    ];
+        });
+        for (const slugAlias of artifact.aliases) {
+            objects.push({
+                key: slugKey(slugAlias),
+                metadata: {
+                    id: artifact.id,
+                },
+            });
+        }
+    }
+    const sortedArtifacts = [...artifacts];
+    // We sort the artifacts here so that the API worker doesn't need to. The
+    // order isn't important, but it does need to be deterministic. We sort by the
+    // artifact ID, since that doesn't change, and we specify the locale to sort
+    // in so that the sort order doesn't change.
+    sortedArtifacts.sort((a, b) => a.id.localeCompare(b.id, "en", { usage: "sort" }));
+    objects.push({
+        key: artifactListKey,
+        obj: sortedArtifacts,
+    });
     yield putKeys({
         accountId,
         secretToken,
@@ -282,7 +308,7 @@ const putArtifact = ({ accountId, secretToken, namespace, artifact, }) => __awai
         objects,
     });
 });
-exports.putArtifact = putArtifact;
+exports.putArtifacts = putArtifacts;
 
 
 /***/ }),
@@ -394,16 +420,16 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
                 throw new Error(`Downloaded file does not match the hash included in the submission: ${submission.slug}/${fileSubmission.fileName}\nURL: ${fileSubmission.sourceUrl}\nExpected: ${(0, hash_1.debugPrintDigest)(multihash)}\nActual: ${(0, hash_1.debugPrintDigest)(downloadResult.actualDigest)}`);
             }
         }
-        const artifactMetadata = (0, submission_1.toApi)(submission, params);
-        artifactMetadataList.push(artifactMetadata);
-        yield (0, kv_1.putArtifact)({
-            accountId: params.cloudflareAccountId,
-            secretToken: params.cloudflareApiToken,
-            namespace: params.kvNamespaceId,
-            artifact: artifactMetadata,
-        });
-        core.info(`Wrote artifact metadata: ${submission.slug}`);
+        artifactMetadataList.push((0, submission_1.toApi)(submission, params));
     }
+    core.info(`Writing artifact metadata...`);
+    yield (0, kv_1.putArtifacts)({
+        accountId: params.cloudflareAccountId,
+        secretToken: params.cloudflareApiToken,
+        namespace: params.kvNamespaceId,
+        artifacts: artifactMetadataList,
+    });
+    core.info(`Finished writing artifact metadata.`);
     core.setOutput("artifacts", artifactMetadataList);
     core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
     core.info(`Uploaded ${filesUploaded} files to S3.`);
