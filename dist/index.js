@@ -246,8 +246,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.putArtifacts = void 0;
+exports.getArtifactIdBySlug = exports.putArtifacts = void 0;
 const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
+const submission_1 = __nccwpck_require__(16307);
 const Version = {
     artifacts: 2,
     slugs: 1,
@@ -257,7 +258,7 @@ const putKeys = ({ accountId, secretToken, namespace, objects, }) => __awaiter(v
     // pairs at once, with a maximum total request size of 100MB. For simplicity's
     // sake, we do not attempt to batch multiple bulk API calls and work under the
     // assumption that we will never exceed these limits.
-    yield (0, node_fetch_1.default)(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/bulk`, {
+    const response = yield (0, node_fetch_1.default)(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/bulk`, {
         method: "PUT",
         headers: {
             Authorization: `Bearer ${secretToken}`,
@@ -265,6 +266,28 @@ const putKeys = ({ accountId, secretToken, namespace, objects, }) => __awaiter(v
         },
         body: JSON.stringify(objects.map((obj) => (Object.assign({ key: obj.key, value: obj.obj === undefined ? "" : JSON.stringify(obj.obj) }, (obj.metadata !== undefined && { metadata: obj.metadata }))))),
     });
+    if (!response.ok) {
+        const bodyText = yield response.text();
+        throw new Error(`${response.status} ${response.statusText}\n${bodyText}`);
+    }
+});
+const getKeyMetadata = ({ accountId, secretToken, namespace, key, }) => __awaiter(void 0, void 0, void 0, function* () {
+    const response = yield (0, node_fetch_1.default)(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/metadata/${encodeURIComponent(key)}`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${secretToken}`,
+            ["Content-Type"]: "application/json",
+        },
+    });
+    if (response.status === 404) {
+        return undefined;
+    }
+    if (!response.ok) {
+        const bodyText = yield response.text();
+        throw new Error(`${response.status} ${response.statusText}\n${bodyText}`);
+    }
+    const responseBody = (yield response.json());
+    return responseBody["result"];
 });
 const artifactListKey = `artifacts:v${Version.artifacts}:`;
 const artifactKey = (artifactId) => `artifacts:v${Version.artifacts}:${artifactId}`;
@@ -309,6 +332,26 @@ const putArtifacts = ({ accountId, secretToken, namespace, artifacts, }) => __aw
     });
 });
 exports.putArtifacts = putArtifacts;
+const getArtifactIdBySlug = ({ accountId, secretToken, namespace, artifactSlug, }) => __awaiter(void 0, void 0, void 0, function* () {
+    const keyMetadata = yield getKeyMetadata({
+        accountId,
+        secretToken,
+        namespace,
+        key: slugKey(artifactSlug),
+    });
+    if (keyMetadata === undefined) {
+        return undefined;
+    }
+    if (!(0, submission_1.isJsonObject)(keyMetadata)) {
+        throw new Error(`Metadata for this key in KV is not a JSON object: ${slugKey(artifactSlug)}`);
+    }
+    const artifactId = keyMetadata.id;
+    if (!(0, submission_1.isString)(artifactId)) {
+        throw new Error(`Artifact ID in metadata of this key in KV is not a string: ${slugKey(artifactSlug)}`);
+    }
+    return artifactId;
+});
+exports.getArtifactIdBySlug = getArtifactIdBySlug;
 
 
 /***/ }),
@@ -375,7 +418,7 @@ const validate = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0,
     // Calculate the multihash for file submissions which don't have one and also
     // set the media type for file submissions which don't have one if the GET or
     // HEAD response returns a `Content-Type` header.
-    const completedSubmissions = yield (0, validate_1.completeArtifactSubmissions)(submissions);
+    const completedSubmissions = yield (0, validate_1.completeArtifactSubmissions)(submissions, params);
     yield (0, validate_1.writeArtifactSubmissions)(completedSubmissions, params);
 });
 const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
@@ -391,7 +434,7 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
     const artifactMetadataList = [];
     for (const submission of submissions) {
         if (!(0, submission_1.isSubmissionValidated)(submission)) {
-            throw new Error(`Submission has at least one file with no multihash: ${submission.slug}\nYou must run in \`validate\` mode first to compute missing multihashes.`);
+            throw new Error(`Submission is missing mandatory fields which can be generated: ${submission.slug}\nYou must run in \`validate\` mode first to compute missing fields.`);
         }
         for (const fileSubmission of submission.files) {
             const multihash = (0, hash_1.decodeMultihash)(fileSubmission.multihash);
@@ -828,10 +871,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.toApi = exports.isSubmissionValidated = void 0;
+exports.toApi = exports.isSubmissionValidated = exports.isString = exports.isJsonObject = void 0;
 const path_1 = __importDefault(__nccwpck_require__(71017));
 const hash_1 = __nccwpck_require__(41859);
 const s3_1 = __nccwpck_require__(81863);
+const isJsonObject = (value) => typeof value === "object" && !Array.isArray(value) && value !== null;
+exports.isJsonObject = isJsonObject;
+const isString = (value) => typeof value === "string";
+exports.isString = isString;
 const isSubmissionValidated = (submission) => submission.id !== undefined &&
     submission.files.every((fileSubmission) => fileSubmission.multihash !== undefined);
 exports.isSubmissionValidated = isSubmissionValidated;
@@ -925,6 +972,7 @@ const promises_1 = __importDefault(__nccwpck_require__(73292));
 const download_1 = __nccwpck_require__(95933);
 const hash_1 = __nccwpck_require__(41859);
 const id_1 = __nccwpck_require__(33064);
+const kv_1 = __nccwpck_require__(18116);
 const repo_1 = __nccwpck_require__(58139);
 // To avoid unnecessary noise in the git diffs, this should match the
 // indentation used for pretty-printing the submission JSON in the artifact
@@ -986,16 +1034,30 @@ const applyFileDetails = (files, detailsMap) => __awaiter(void 0, void 0, void 0
         }
     });
 });
+// If there is already an existing artifact with this slug in KV, get its
+// artifact ID. Otherwise, generate a new one.
+const getArtifactId = (artifactSlug, params) => __awaiter(void 0, void 0, void 0, function* () {
+    const idOfExistingArtifact = yield (0, kv_1.getArtifactIdBySlug)({
+        accountId: params.cloudflareAccountId,
+        secretToken: params.cloudflareApiToken,
+        namespace: params.kvNamespaceId,
+        artifactSlug,
+    });
+    if (idOfExistingArtifact !== undefined) {
+        return idOfExistingArtifact;
+    }
+    return (0, id_1.newRandomArtifactID)();
+});
 // Make "incomplete" artifact submissions "complete" by:
 // - Generating a random artifact ID for each artifact that doesn't already
 //   have one.
 // - Downloading files from their source URLs to get the IANA media type from
 //   the origin server and calculate the hash, but only if the file doesn't
 //   already have those fields in the submission.
-const completeArtifactSubmissions = (submissions) => Promise.all(submissions.map((incompleteSubmission) => __awaiter(void 0, void 0, void 0, function* () {
+const completeArtifactSubmissions = (submissions, params) => Promise.all(submissions.map((incompleteSubmission) => __awaiter(void 0, void 0, void 0, function* () {
     const fileDetailsMap = yield completeFileDetails(submissions);
     return Object.assign(Object.assign({}, incompleteSubmission), { id: incompleteSubmission.id === undefined
-            ? (0, id_1.newRandomArtifactID)()
+            ? yield getArtifactId(incompleteSubmission.slug, params)
             : incompleteSubmission.id, files: yield applyFileDetails(incompleteSubmission.files, fileDetailsMap) });
 })));
 exports.completeArtifactSubmissions = completeArtifactSubmissions;
