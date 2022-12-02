@@ -411,13 +411,7 @@ const s3_1 = __nccwpck_require__(81863);
 const submission_1 = __nccwpck_require__(16307);
 const validate_1 = __nccwpck_require__(81997);
 const validate = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
-    core.info("Adding IDs to new artifacts...");
-    core.info("Updating file submissions missing hashes or media types...");
-    // Add an artifact ID to artifacts which don't have one yet (new artifacts).
-    //
-    // Calculate the multihash for file submissions which don't have one and also
-    // set the media type for file submissions which don't have one if the GET or
-    // HEAD response returns a `Content-Type` header.
+    core.info("Computing missing submission fields...");
     const completedSubmissions = yield (0, validate_1.completeArtifactSubmissions)(submissions, params);
     yield (0, validate_1.writeArtifactSubmissions)(completedSubmissions, params);
 });
@@ -993,7 +987,7 @@ const completeFileDetails = (submissions) => __awaiter(void 0, void 0, void 0, f
             incompleteDetails.multihash !== undefined)
             continue;
         if (incompleteDetails.multihash === undefined) {
-            core.info(`GET ${sourceUrl}`);
+            core.info(`Downloading file from source URL to compute hash: GET ${sourceUrl}`);
             const { path, mediaType } = yield (0, download_1.downloadFile)(sourceUrl);
             const multihash = yield (0, hash_1.hashFile)(path, hash_1.defaultAlgorithm);
             yield promises_1.default.unlink(path);
@@ -1003,9 +997,10 @@ const completeFileDetails = (submissions) => __awaiter(void 0, void 0, void 0, f
             };
             (_a = completeDetails.mediaType) !== null && _a !== void 0 ? _a : (completeDetails.mediaType = mediaType);
             completeDetailsMap.set(sourceUrl, completeDetails);
+            core.info(`GET request successful: ${sourceUrl}`);
         }
         else {
-            core.info(`HEAD ${sourceUrl}`);
+            core.info(`Checking Content-Type header of source URL to get media type: HEAD ${sourceUrl}`);
             const { mediaType } = yield (0, download_1.headFile)(sourceUrl);
             const completeDetails = {
                 multihash: incompleteDetails.multihash,
@@ -1013,8 +1008,8 @@ const completeFileDetails = (submissions) => __awaiter(void 0, void 0, void 0, f
             };
             (_b = completeDetails.mediaType) !== null && _b !== void 0 ? _b : (completeDetails.mediaType = mediaType);
             completeDetailsMap.set(sourceUrl, completeDetails);
+            core.info(`HEAD request successful: ${sourceUrl}`);
         }
-        core.info(`Successfully downloaded: ${sourceUrl}`);
     }
     return completeDetailsMap;
 });
@@ -1036,7 +1031,7 @@ const applyFileDetails = (files, detailsMap) => __awaiter(void 0, void 0, void 0
 });
 // If there is already an existing artifact with this slug in KV, get its
 // artifact ID. Otherwise, generate a new one.
-const getArtifactId = (artifactSlug, params) => __awaiter(void 0, void 0, void 0, function* () {
+const getOrCreateArtifactId = (artifactSlug, params) => __awaiter(void 0, void 0, void 0, function* () {
     const idOfExistingArtifact = yield (0, kv_1.getArtifactIdBySlug)({
         accountId: params.cloudflareAccountId,
         secretToken: params.cloudflareApiToken,
@@ -1044,20 +1039,33 @@ const getArtifactId = (artifactSlug, params) => __awaiter(void 0, void 0, void 0
         artifactSlug,
     });
     if (idOfExistingArtifact !== undefined) {
+        core.warning(`Artifact is missing its ID, but the slug exists in KV: ${artifactSlug}\nGetting the existing artifact ID from KV.`);
         return idOfExistingArtifact;
     }
+    core.info(`Generating an artifact ID for a new artifact: ${artifactSlug}`);
     return (0, id_1.newRandomArtifactID)();
 });
-// Make "incomplete" artifact submissions "complete" by:
-// - Generating a random artifact ID for each artifact that doesn't already
-//   have one.
-// - Downloading files from their source URLs to get the IANA media type from
-//   the origin server and calculate the hash, but only if the file doesn't
-//   already have those fields in the submission.
+// Make "incomplete" artifact submissions "complete" by filling in missing
+// fields which are intended to be computed/inferred.
+//
+// If a submission is missing an artifact ID, then this method first check if an
+// artifact with that slug already exists in KV. If it does, then it pulls the
+// existing artifact ID from KV. This shouldn't happen during normal use, but
+// it's a useful safeguard to ensure that artifact IDs never change.
+//
+// If a submission is missing an artifact ID and the slug does not already exist
+// in KV, then it means it's a new artifact and we generate an artifact ID for
+// it.
+//
+// If a file in a submission is missing a media type, we check the
+// `Content-Type` header from the source URL.
+//
+// If a file in a submission is missing a multihash, we download the file from
+// the source URL and compute the hash.
 const completeArtifactSubmissions = (submissions, params) => Promise.all(submissions.map((incompleteSubmission) => __awaiter(void 0, void 0, void 0, function* () {
     const fileDetailsMap = yield completeFileDetails(submissions);
     return Object.assign(Object.assign({}, incompleteSubmission), { id: incompleteSubmission.id === undefined
-            ? yield getArtifactId(incompleteSubmission.slug, params)
+            ? yield getOrCreateArtifactId(incompleteSubmission.slug, params)
             : incompleteSubmission.id, files: yield applyFileDetails(incompleteSubmission.files, fileDetailsMap) });
 })));
 exports.completeArtifactSubmissions = completeArtifactSubmissions;
