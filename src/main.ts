@@ -7,7 +7,7 @@ import { getParams, Params } from "./params";
 import { getSubmissions } from "./repo";
 import { schema } from "./schema";
 import { downloadAndVerify } from "./download";
-import { putArtifact } from "./kv";
+import { putArtifacts } from "./kv";
 import { debugPrintDigest, decodeMultihash } from "./hash";
 import { listMultihashes, newClient, putArtifactFile } from "./s3";
 import {
@@ -123,18 +123,19 @@ const upload = async ({
       }
     }
 
-    const artifactMetadata = toApi(submission, params);
-    artifactMetadataList.push(artifactMetadata);
-
-    await putArtifact({
-      accountId: params.cloudflareAccountId,
-      secretToken: params.cloudflareApiToken,
-      namespace: params.kvNamespaceId,
-      artifact: artifactMetadata,
-    });
-
-    core.info(`Wrote artifact metadata: ${submission.slug}`);
+    artifactMetadataList.push(toApi(submission, params));
   }
+
+  core.info(`Writing artifact metadata...`);
+
+  await putArtifacts({
+    accountId: params.cloudflareAccountId,
+    secretToken: params.cloudflareApiToken,
+    namespace: params.kvNamespaceId,
+    artifacts: artifactMetadataList,
+  });
+
+  core.info(`Finished writing artifact metadata.`);
 
   core.setOutput("artifacts", artifactMetadataList);
 

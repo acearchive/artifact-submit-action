@@ -24,6 +24,11 @@ const putKeys = async ({
   namespace: string;
   objects: ReadonlyArray<KVObject>;
 }): Promise<void> => {
+  // As of time of writing, the bulk API is documented to accept up to 10,000 KV
+  // pairs at once, with a maximum total request size of 100MB. For simplicity's
+  // sake, we do not attempt to batch multiple bulk API calls and work under the
+  // assumption that we will never exceed these limits.
+
   await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/bulk`,
     {
@@ -43,29 +48,63 @@ const putKeys = async ({
   );
 };
 
-export const putArtifact = async ({
+const artifactListKey = `artifacts:v${Version.artifacts}:`;
+
+const artifactKey = (artifactId: string): string =>
+  `artifacts:v${Version.artifacts}:${artifactId}`;
+
+const slugKey = (slug: string): string => `slugs:v${Version.slugs}:${slug}`;
+
+export const putArtifacts = async ({
   accountId,
   secretToken,
   namespace,
-  artifact,
+  artifacts,
 }: {
   accountId: string;
   secretToken: string;
   namespace: string;
-  artifact: Artifact;
+  artifacts: ReadonlyArray<Artifact>;
 }): Promise<void> => {
-  const objects: ReadonlyArray<KVObject> = [
-    {
-      key: `artifacts:v${Version.artifacts}:${artifact.id}`,
+  const objects: Array<KVObject> = [];
+
+  for (const artifact of artifacts) {
+    objects.push({
+      key: artifactKey(artifact.id),
       obj: artifact,
-    },
-    ...[artifact.slug, ...artifact.aliases].map((slug) => ({
-      key: `slugs:v${Version.slugs}:${slug}`,
+    });
+
+    objects.push({
+      key: slugKey(artifact.slug),
       metadata: {
         id: artifact.id,
       },
-    })),
-  ];
+    });
+
+    for (const slugAlias of artifact.aliases) {
+      objects.push({
+        key: slugKey(slugAlias),
+        metadata: {
+          id: artifact.id,
+        },
+      });
+    }
+  }
+
+  const sortedArtifacts = [...artifacts];
+
+  // We sort the artifacts here so that the API worker doesn't need to. The
+  // order isn't important, but it does need to be deterministic. We sort by the
+  // artifact ID, since that doesn't change, and we specify the locale to sort
+  // in so that the sort order doesn't change.
+  sortedArtifacts.sort((a, b) =>
+    a.id.localeCompare(b.id, "en", { usage: "sort" })
+  );
+
+  objects.push({
+    key: artifactListKey,
+    obj: sortedArtifacts,
+  });
 
   await putKeys({
     accountId,
