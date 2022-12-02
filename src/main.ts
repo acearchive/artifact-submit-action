@@ -37,7 +37,10 @@ const validate = async ({
   // Calculate the multihash for file submissions which don't have one and also
   // set the media type for file submissions which don't have one if the GET or
   // HEAD response returns a `Content-Type` header.
-  const completedSubmissions = await completeArtifactSubmissions(submissions);
+  const completedSubmissions = await completeArtifactSubmissions(
+    submissions,
+    params
+  );
   await writeArtifactSubmissions(completedSubmissions, params);
 };
 
@@ -68,7 +71,7 @@ const upload = async ({
   for (const submission of submissions) {
     if (!isSubmissionValidated(submission)) {
       throw new Error(
-        `Submission has at least one file with no multihash: ${submission.slug}\nYou must run in \`validate\` mode first to compute missing multihashes.`
+        `Submission is missing mandatory fields which can be generated: ${submission.slug}\nYou must run in \`validate\` mode first to compute missing fields.`
       );
     }
 

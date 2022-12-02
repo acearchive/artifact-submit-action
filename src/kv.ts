@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import { Artifact } from "./api";
-import { JsonValue } from "./submission";
+import { isJsonObject, isString, JsonObject, JsonValue } from "./submission";
 
 const Version = {
   artifacts: 2,
@@ -29,7 +29,7 @@ const putKeys = async ({
   // sake, we do not attempt to batch multiple bulk API calls and work under the
   // assumption that we will never exceed these limits.
 
-  await fetch(
+  const response = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/bulk`,
     {
       method: "PUT",
@@ -46,6 +46,48 @@ const putKeys = async ({
       ),
     }
   );
+
+  if (!response.ok) {
+    const bodyText = await response.text();
+    throw new Error(`${response.status} ${response.statusText}\n${bodyText}`);
+  }
+};
+
+const getKeyMetadata = async ({
+  accountId,
+  secretToken,
+  namespace,
+  key,
+}: {
+  accountId: string;
+  secretToken: string;
+  namespace: string;
+  key: string;
+}): Promise<JsonValue | undefined> => {
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/metadata/${encodeURIComponent(
+      key
+    )}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${secretToken}`,
+        ["Content-Type"]: "application/json",
+      },
+    }
+  );
+
+  if (response.status === 404) {
+    return undefined;
+  }
+
+  if (!response.ok) {
+    const bodyText = await response.text();
+    throw new Error(`${response.status} ${response.statusText}\n${bodyText}`);
+  }
+
+  const responseBody = (await response.json()) as JsonObject;
+  return responseBody["result"];
 };
 
 const artifactListKey = `artifacts:v${Version.artifacts}:`;
@@ -112,4 +154,47 @@ export const putArtifacts = async ({
     namespace,
     objects,
   });
+};
+
+export const getArtifactIdBySlug = async ({
+  accountId,
+  secretToken,
+  namespace,
+  artifactSlug,
+}: {
+  accountId: string;
+  secretToken: string;
+  namespace: string;
+  artifactSlug: string;
+}): Promise<string | undefined> => {
+  const keyMetadata = await getKeyMetadata({
+    accountId,
+    secretToken,
+    namespace,
+    key: slugKey(artifactSlug),
+  });
+
+  if (keyMetadata === undefined) {
+    return undefined;
+  }
+
+  if (!isJsonObject(keyMetadata)) {
+    throw new Error(
+      `Metadata for this key in KV is not a JSON object: ${slugKey(
+        artifactSlug
+      )}`
+    );
+  }
+
+  const artifactId = keyMetadata.id;
+
+  if (!isString(artifactId)) {
+    throw new Error(
+      `Artifact ID in metadata of this key in KV is not a string: ${slugKey(
+        artifactSlug
+      )}`
+    );
+  }
+
+  return artifactId;
 };

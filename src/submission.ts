@@ -19,6 +19,12 @@ export type JsonValue =
 
 export type JsonObject = Readonly<Record<string, JsonValue>>;
 
+export const isJsonObject = (value: JsonValue): value is JsonObject =>
+  typeof value === "object" && !Array.isArray(value) && value !== null;
+
+export const isString = (value: JsonValue): value is string =>
+  typeof value === "string";
+
 export type IncompleteFileSubmission = Readonly<{
   name: string;
   fileName: string;
