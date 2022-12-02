@@ -59,7 +59,9 @@ const completeFileDetails = async (
       continue;
 
     if (incompleteDetails.multihash === undefined) {
-      core.info(`GET ${sourceUrl}`);
+      core.info(
+        `Downloading file from source URL to compute hash: GET ${sourceUrl}`
+      );
 
       const { path, mediaType } = await downloadFile(sourceUrl);
       const multihash = await hashFile(path, defaultAlgorithm);
@@ -73,8 +75,12 @@ const completeFileDetails = async (
       completeDetails.mediaType ??= mediaType;
 
       completeDetailsMap.set(sourceUrl, completeDetails);
+
+      core.info(`GET request successful: ${sourceUrl}`);
     } else {
-      core.info(`HEAD ${sourceUrl}`);
+      core.info(
+        `Checking Content-Type header of source URL to get media type: HEAD ${sourceUrl}`
+      );
       const { mediaType } = await headFile(sourceUrl);
 
       const completeDetails: CompleteFileDetails = {
@@ -85,9 +91,9 @@ const completeFileDetails = async (
       completeDetails.mediaType ??= mediaType;
 
       completeDetailsMap.set(sourceUrl, completeDetails);
-    }
 
-    core.info(`Successfully downloaded: ${sourceUrl}`);
+      core.info(`HEAD request successful: ${sourceUrl}`);
+    }
   }
 
   return completeDetailsMap;
@@ -125,7 +131,7 @@ const applyFileDetails = async (
 
 // If there is already an existing artifact with this slug in KV, get its
 // artifact ID. Otherwise, generate a new one.
-const getArtifactId = async (
+const getOrCreateArtifactId = async (
   artifactSlug: string,
   params: Params
 ): Promise<string> => {
@@ -137,18 +143,33 @@ const getArtifactId = async (
   });
 
   if (idOfExistingArtifact !== undefined) {
+    core.warning(
+      `Artifact is missing its ID, but the slug exists in KV: ${artifactSlug}\nGetting the existing artifact ID from KV.`
+    );
     return idOfExistingArtifact;
   }
 
+  core.info(`Generating an artifact ID for a new artifact: ${artifactSlug}`);
   return newRandomArtifactID();
 };
 
-// Make "incomplete" artifact submissions "complete" by:
-// - Generating a random artifact ID for each artifact that doesn't already
-//   have one.
-// - Downloading files from their source URLs to get the IANA media type from
-//   the origin server and calculate the hash, but only if the file doesn't
-//   already have those fields in the submission.
+// Make "incomplete" artifact submissions "complete" by filling in missing
+// fields which are intended to be computed/inferred.
+//
+// If a submission is missing an artifact ID, then this method first check if an
+// artifact with that slug already exists in KV. If it does, then it pulls the
+// existing artifact ID from KV. This shouldn't happen during normal use, but
+// it's a useful safeguard to ensure that artifact IDs never change.
+//
+// If a submission is missing an artifact ID and the slug does not already exist
+// in KV, then it means it's a new artifact and we generate an artifact ID for
+// it.
+//
+// If a file in a submission is missing a media type, we check the
+// `Content-Type` header from the source URL.
+//
+// If a file in a submission is missing a multihash, we download the file from
+// the source URL and compute the hash.
 export const completeArtifactSubmissions = (
   submissions: ReadonlyArray<IncompleteArtifactSubmission>,
   params: Params
@@ -161,7 +182,7 @@ export const completeArtifactSubmissions = (
         ...incompleteSubmission,
         id:
           incompleteSubmission.id === undefined
-            ? await getArtifactId(incompleteSubmission.slug, params)
+            ? await getOrCreateArtifactId(incompleteSubmission.slug, params)
             : incompleteSubmission.id,
         files: await applyFileDetails(
           incompleteSubmission.files,

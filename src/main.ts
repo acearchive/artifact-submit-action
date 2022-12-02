@@ -29,14 +29,7 @@ const validate = async ({
   params: Params;
   submissions: ReadonlyArray<IncompleteArtifactSubmission>;
 }): Promise<void> => {
-  core.info("Adding IDs to new artifacts...");
-  core.info("Updating file submissions missing hashes or media types...");
-
-  // Add an artifact ID to artifacts which don't have one yet (new artifacts).
-  //
-  // Calculate the multihash for file submissions which don't have one and also
-  // set the media type for file submissions which don't have one if the GET or
-  // HEAD response returns a `Content-Type` header.
+  core.info("Computing missing submission fields...");
   const completedSubmissions = await completeArtifactSubmissions(
     submissions,
     params
