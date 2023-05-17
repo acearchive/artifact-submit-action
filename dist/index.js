@@ -1065,12 +1065,14 @@ const getOrCreateArtifactId = (artifactSlug, params) => __awaiter(void 0, void 0
 //
 // If a file in a submission is missing a multihash, we download the file from
 // the source URL and compute the hash.
-const completeArtifactSubmissions = (submissions, params) => Promise.all(submissions.map((incompleteSubmission) => __awaiter(void 0, void 0, void 0, function* () {
+const completeArtifactSubmissions = (submissions, params) => __awaiter(void 0, void 0, void 0, function* () {
     const fileDetailsMap = yield completeFileDetails(submissions);
-    return Object.assign(Object.assign({}, incompleteSubmission), { id: incompleteSubmission.id === undefined
-            ? yield getOrCreateArtifactId(incompleteSubmission.slug, params)
-            : incompleteSubmission.id, files: yield applyFileDetails(incompleteSubmission.files, fileDetailsMap) });
-})));
+    return yield Promise.all(submissions.map((incompleteSubmission) => __awaiter(void 0, void 0, void 0, function* () {
+        return Object.assign(Object.assign({}, incompleteSubmission), { id: incompleteSubmission.id === undefined
+                ? yield getOrCreateArtifactId(incompleteSubmission.slug, params)
+                : incompleteSubmission.id, files: yield applyFileDetails(incompleteSubmission.files, fileDetailsMap) });
+    })));
+});
 exports.completeArtifactSubmissions = completeArtifactSubmissions;
 // Write "complete" artifact submissions to the local clone of the git repo.
 const writeArtifactSubmissions = (submissions, params) => __awaiter(void 0, void 0, void 0, function* () {
