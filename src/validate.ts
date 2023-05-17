@@ -178,14 +178,14 @@ const getOrCreateArtifactId = async (
 //
 // If a file in a submission is missing a multihash, we download the file from
 // the source URL and compute the hash.
-export const completeArtifactSubmissions = (
+export const completeArtifactSubmissions = async (
   submissions: ReadonlyArray<IncompleteArtifactSubmission>,
   params: Params
-): Promise<ReadonlyArray<CompleteArtifactSubmission>> =>
-  Promise.all(
-    submissions.map(async (incompleteSubmission) => {
-      const fileDetailsMap = await completeFileDetails(submissions);
+): Promise<ReadonlyArray<CompleteArtifactSubmission>> => {
+  const fileDetailsMap = await completeFileDetails(submissions);
 
+  return await Promise.all(
+    submissions.map(async (incompleteSubmission) => {
       return {
         ...incompleteSubmission,
         id:
@@ -199,6 +199,7 @@ export const completeArtifactSubmissions = (
       };
     })
   );
+};
 
 // Write "complete" artifact submissions to the local clone of the git repo.
 export const writeArtifactSubmissions = async (
