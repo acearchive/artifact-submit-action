@@ -37,6 +37,8 @@ type CompleteFileDetailsMap = Map<URL, CompleteFileDetails>;
 const completeFileDetails = async (
   submissions: ReadonlyArray<IncompleteArtifactSubmission>
 ): Promise<CompleteFileDetailsMap> => {
+  core.debug(`Completing file details of ${submissions.length} submissions.`);
+
   const incompleteDetailsMap: IncompleteFileDetailsMap = new Map(
     submissions.flatMap(({ files }) =>
       files.map(({ sourceUrl, multihash, mediaType }) => [
@@ -49,6 +51,8 @@ const completeFileDetails = async (
     )
   );
 
+  core.debug(`Completing file details of ${incompleteDetailsMap.size} files.`);
+
   const completeDetailsMap: CompleteFileDetailsMap = new Map();
 
   for (const [sourceUrl, incompleteDetails] of incompleteDetailsMap) {
@@ -57,6 +61,10 @@ const completeFileDetails = async (
       incompleteDetails.multihash !== undefined
     )
       continue;
+
+    core.debug(
+      `File with this URL is missing media type or multihash: ${sourceUrl}`
+    );
 
     if (incompleteDetails.multihash === undefined) {
       core.info(
