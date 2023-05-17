@@ -974,6 +974,7 @@ const repo_1 = __nccwpck_require__(58139);
 const jsonPrettyPrintIndent = 2;
 const completeFileDetails = (submissions) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
+    core.debug(`Completing file details of ${submissions.length} submissions.`);
     const incompleteDetailsMap = new Map(submissions.flatMap(({ files }) => files.map(({ sourceUrl, multihash, mediaType }) => [
         sourceUrl,
         {
@@ -981,11 +982,13 @@ const completeFileDetails = (submissions) => __awaiter(void 0, void 0, void 0, f
             mediaType,
         },
     ])));
+    core.debug(`Completing file details of ${incompleteDetailsMap.size} files.`);
     const completeDetailsMap = new Map();
     for (const [sourceUrl, incompleteDetails] of incompleteDetailsMap) {
         if (incompleteDetails.mediaType !== undefined &&
             incompleteDetails.multihash !== undefined)
             continue;
+        core.debug(`File with this URL is missing media type or multihash: ${sourceUrl}`);
         if (incompleteDetails.multihash === undefined) {
             core.info(`Downloading file from source URL to compute hash: GET ${sourceUrl}`);
             const { path, mediaType } = yield (0, download_1.downloadFile)(sourceUrl);
