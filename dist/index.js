@@ -503,14 +503,6 @@ const child_process_1 = __nccwpck_require__(32081);
 const promises_1 = __importDefault(__nccwpck_require__(73292));
 const core = __importStar(__nccwpck_require__(42186));
 const submissionFileExt = ".json";
-const readStreamToString = (stream) => __awaiter(void 0, void 0, void 0, function* () {
-    let output = "";
-    stream.on("data", (chunk) => {
-        output += chunk;
-    });
-    yield new Promise((resolve) => stream.on("end", resolve));
-    return output;
-});
 // This uses git to determine which submission files have been modified between
 // `main` and the PR which triggered this action.
 const listModifiedSubmissionFiles = (repoPath, submissionPath) => __awaiter(void 0, void 0, void 0, function* () {
