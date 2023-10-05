@@ -10,10 +10,7 @@ export type ArtifactFile = Readonly<{
   name: string;
   filename: string;
   media_type?: string;
-  hash: string;
-  hash_algorithm: string;
   multihash: string;
-  storage_key: string;
   url: string;
   lang?: LanguageCode;
   hidden: boolean;
