@@ -2,7 +2,7 @@ import Joi from "joi";
 import ISO6391 from "iso-639-1";
 import { artifactIdLength } from "./id";
 
-export const version = 1;
+export const version = 2;
 
 const urlSlugPattern = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const fileNamePattern =
