@@ -694,7 +694,7 @@ exports.schema = exports.version = void 0;
 const joi_1 = __importDefault(__nccwpck_require__(20918));
 const iso_639_1_1 = __importDefault(__nccwpck_require__(88772));
 const id_1 = __nccwpck_require__(33064);
-exports.version = 1;
+exports.version = 2;
 const urlSlugPattern = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const fileNamePattern = /^[a-z0-9][a-z0-9-]*[a-z0-9](\/[a-z0-9][a-z0-9-]*[a-z0-9])*(\.[a-z0-9]+)*$/;
 const mediaTypePattern = /^(application|audio|font|image|model|text|video|message|multipart)\/[\w\d.+-]+$/;
