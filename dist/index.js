@@ -719,13 +719,13 @@ exports.schema = joi_1.default.object({
     summary: joi_1.default.string().trim().max(150).empty("").required(),
     description: joi_1.default.string().trim().max(1000).empty(""),
     files: joi_1.default.array()
-        .unique((a, b) => a.file_name === b.file_name ||
+        .unique((a, b) => a.filename === b.filename ||
         // If two files have the same URL but different hashes, they can't both
         // be valid.
         (a.source_url === b.source_url && a.multihash !== b.multihash))
         .items(joi_1.default.object({
         name: joi_1.default.string().max(256).empty("").required(),
-        file_name: joi_1.default.string().pattern(fileNamePattern).empty("").required(),
+        filename: joi_1.default.string().pattern(fileNamePattern).empty("").required(),
         media_type: joi_1.default.string().pattern(mediaTypePattern).empty(""),
         multihash: joi_1.default.when(joi_1.default.ref("$mode"), {
             is: "validate",
