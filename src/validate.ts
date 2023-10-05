@@ -3,7 +3,6 @@ import fsPromises from "fs/promises";
 import { downloadFile, headFile } from "./download";
 import { defaultAlgorithm, encodeMultihash, hashFile } from "./hash";
 import { newRandomArtifactID } from "./id";
-import { getArtifactIdBySlug } from "./kv";
 import { Params } from "./params";
 import { getSubmissionPath, RawSubmission } from "./repo";
 import {
@@ -137,30 +136,6 @@ const applyFileDetails = async (
     }
   });
 
-// If there is already an existing artifact with this slug in KV, get its
-// artifact ID. Otherwise, generate a new one.
-const getOrCreateArtifactId = async (
-  artifactSlug: string,
-  params: Params
-): Promise<string> => {
-  const idOfExistingArtifact = await getArtifactIdBySlug({
-    accountId: params.cloudflareAccountId,
-    secretToken: params.cloudflareApiToken,
-    namespace: params.kvNamespaceId,
-    artifactSlug,
-  });
-
-  if (idOfExistingArtifact !== undefined) {
-    core.warning(
-      `Artifact is missing its ID, but the slug exists in KV: ${artifactSlug}\nGetting the existing artifact ID from KV.`
-    );
-    return idOfExistingArtifact;
-  }
-
-  core.info(`Generating an artifact ID for a new artifact: ${artifactSlug}`);
-  return newRandomArtifactID();
-};
-
 // Make "incomplete" artifact submissions "complete" by filling in missing
 // fields which are intended to be computed/inferred.
 //
@@ -188,10 +163,7 @@ export const completeArtifactSubmissions = async (
     submissions.map(async (incompleteSubmission) => {
       return {
         ...incompleteSubmission,
-        id:
-          incompleteSubmission.id === undefined
-            ? await getOrCreateArtifactId(incompleteSubmission.slug, params)
-            : incompleteSubmission.id,
+        id: incompleteSubmission.id ?? newRandomArtifactID(),
         files: await applyFileDetails(
           incompleteSubmission.files,
           fileDetailsMap
