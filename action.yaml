@@ -52,6 +52,11 @@ inputs:
     description: >
       The secret access key for S3.
     required: true
+  submission_worker_secret:
+    description: >
+      The secret used to authenticate with submission-worker in order to upload
+      metadata to the database.
+    required: true
 outputs:
   artifacts:
     description: >

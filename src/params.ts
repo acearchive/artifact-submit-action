@@ -17,6 +17,7 @@ export type Params = Readonly<{
   s3Region: string;
   s3AccessKeyId: string;
   s3SecretAccessKey: string;
+  submissionWorkerSecret: string;
 }>;
 
 const schema = Joi.object({
@@ -31,6 +32,9 @@ const schema = Joi.object({
   s3Region: Joi.string().required().label("s3_region"),
   s3AccessKeyId: Joi.string().required().label("s3_access_key_id"),
   s3SecretAccessKey: Joi.string().required().label("s3_secret_access_key"),
+  submissionWorkerSecret: Joi.string()
+    .required()
+    .label("submission_worker_secret"),
 });
 
 export const getParams = (): Params => {
@@ -38,10 +42,14 @@ export const getParams = (): Params => {
   const s3SecretAccessKey = core.getInput("s3_secret_access_key", {
     required: true,
   });
+  const submissionWorkerSecret = core.getInput("submission_worker_secret", {
+    required: true,
+  });
 
   // The S3 access key ID isn't strictly a secret, but we're redacting it anyways.
   core.setSecret(s3AccessKeyId);
   core.setSecret(s3SecretAccessKey);
+  core.setSecret(submissionWorkerSecret);
 
   return Joi.attempt(
     {
@@ -56,6 +64,7 @@ export const getParams = (): Params => {
       s3Region: core.getInput("s3_region", { required: true }),
       s3AccessKeyId,
       s3SecretAccessKey,
+      submissionWorkerSecret,
     },
     schema,
     { abortEarly: false }
