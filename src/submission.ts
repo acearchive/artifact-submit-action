@@ -95,12 +95,12 @@ export const toApi = (
 
     return {
       name: fileInput.name,
-      fileName: fileInput.fileName,
-      mediaType: fileInput.mediaType,
+      filename: fileInput.fileName,
+      media_type: fileInput.mediaType,
       hash: encodedHashFromMultihash(multihash),
-      hashAlgorithm: algorithmName(multihash.code),
+      hash_algorithm: algorithmName(multihash.code),
       multihash: fileInput.multihash,
-      storageKey: keyFromMultihash({
+      storage_key: keyFromMultihash({
         prefix: params.s3Prefix,
         multihash: fileInput.multihash,
       }),
@@ -120,8 +120,8 @@ export const toApi = (
   })),
   people: input.people,
   identities: input.identities,
-  fromYear: input.fromYear,
-  toYear: input.toYear,
+  from_year: input.fromYear,
+  to_year: input.toYear,
   decades: input.decades,
   aliases: input.aliases,
 });

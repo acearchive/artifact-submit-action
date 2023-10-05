@@ -1,25 +1,19 @@
 import { LanguageCode } from "iso-639-1";
 
-// These type definitions represent the shape of the objects stored in KV.
+// These type definitions represent the shape of the objects we need to send to
+// submission-worker so they can be added to the database.
 //
-// Currently, these type definitions are duplicated verbatim across several
-// repos. If you edit one of these types here, they need to be updated in these
-// repos as well:
-//
-// - `acearchive/files-worker`
-// - `acearchive/api-worker`
-//
-// TODO: Use Node `github:` dependencies to import these type definitions from
-// this repo in other repos.
+// TODO: Use Node `github:` dependencies to deduplicate these type definitions
+// across repos.
 
 export type ArtifactFile = Readonly<{
   name: string;
-  fileName: string;
-  mediaType?: string;
+  filename: string;
+  media_type?: string;
   hash: string;
-  hashAlgorithm: string;
+  hash_algorithm: string;
   multihash: string;
-  storageKey: string;
+  storage_key: string;
   url: string;
   lang?: LanguageCode;
   hidden: boolean;
@@ -41,8 +35,8 @@ export type Artifact = Readonly<{
   links: ReadonlyArray<ArtifactLink>;
   people: ReadonlyArray<string>;
   identities: ReadonlyArray<string>;
-  fromYear: number;
-  toYear?: number;
+  from_year: number;
+  to_year?: number;
   decades: ReadonlyArray<number>;
   aliases: ReadonlyArray<string>;
 }>;
