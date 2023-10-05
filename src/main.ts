@@ -30,10 +30,7 @@ const validate = async ({
   submissions: ReadonlyArray<IncompleteArtifactSubmission>;
 }): Promise<void> => {
   core.info("Computing missing submission fields...");
-  const completedSubmissions = await completeArtifactSubmissions(
-    submissions,
-    params
-  );
+  const completedSubmissions = await completeArtifactSubmissions(submissions);
   await writeArtifactSubmissions(completedSubmissions, params);
 };
 

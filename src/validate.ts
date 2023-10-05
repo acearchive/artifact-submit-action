@@ -150,8 +150,7 @@ const applyFileDetails = async (
 // If a file in a submission is missing a multihash, we download the file from
 // the source URL and compute the hash.
 export const completeArtifactSubmissions = async (
-  submissions: ReadonlyArray<IncompleteArtifactSubmission>,
-  params: Params
+  submissions: ReadonlyArray<IncompleteArtifactSubmission>
 ): Promise<ReadonlyArray<CompleteArtifactSubmission>> => {
   const fileDetailsMap = await completeFileDetails(submissions);
 

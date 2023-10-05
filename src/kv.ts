@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import { Artifact } from "./api";
-import { isJsonObject, isString, JsonObject, JsonValue } from "./submission";
+import { JsonValue } from "./submission";
 
 const Version = {
   artifacts: 2,
@@ -51,43 +51,6 @@ const putKeys = async ({
     const bodyText = await response.text();
     throw new Error(`${response.status} ${response.statusText}\n${bodyText}`);
   }
-};
-
-const getKeyMetadata = async ({
-  accountId,
-  secretToken,
-  namespace,
-  key,
-}: {
-  accountId: string;
-  secretToken: string;
-  namespace: string;
-  key: string;
-}): Promise<JsonValue | undefined> => {
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/metadata/${encodeURIComponent(
-      key
-    )}`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${secretToken}`,
-        ["Content-Type"]: "application/json",
-      },
-    }
-  );
-
-  if (response.status === 404) {
-    return undefined;
-  }
-
-  if (!response.ok) {
-    const bodyText = await response.text();
-    throw new Error(`${response.status} ${response.statusText}\n${bodyText}`);
-  }
-
-  const responseBody = (await response.json()) as JsonObject;
-  return responseBody["result"];
 };
 
 const artifactListKey = `artifacts:v${Version.artifacts}:`;
