@@ -40,13 +40,15 @@ const completeFileDetails = async (
 
   const incompleteDetailsMap: IncompleteFileDetailsMap = new Map(
     submissions.flatMap(({ files }) =>
-      files.map(({ sourceUrl, multihash, mediaType }) => [
-        sourceUrl,
-        {
-          multihash,
-          mediaType,
-        },
-      ])
+      files.map(
+        ({ source_url: sourceUrl, multihash, media_type: mediaType }) => [
+          sourceUrl,
+          {
+            multihash,
+            mediaType,
+          },
+        ]
+      )
     )
   );
 
@@ -112,20 +114,20 @@ const applyFileDetails = async (
 ): Promise<ReadonlyArray<CompleteFileSubmission>> =>
   files.map((fileSubmission) => {
     const currentMultihash = fileSubmission.multihash;
-    const currentMediaType = fileSubmission.mediaType;
+    const currentMediaType = fileSubmission.media_type;
 
     if (currentMultihash === undefined) {
-      const details = detailsMap.get(fileSubmission.sourceUrl);
+      const details = detailsMap.get(fileSubmission.source_url);
 
       if (details === undefined) {
         throw new Error(
-          `Unexpected file URL: ${fileSubmission.sourceUrl}\nThis is most likely a bug.`
+          `Unexpected file URL: ${fileSubmission.source_url}\nThis is most likely a bug.`
         );
       }
 
       return {
         ...fileSubmission,
-        mediaType: currentMediaType ?? details.mediaType,
+        media_type: currentMediaType ?? details.mediaType,
         multihash: details.multihash,
       };
     } else {
@@ -139,14 +141,8 @@ const applyFileDetails = async (
 // Make "incomplete" artifact submissions "complete" by filling in missing
 // fields which are intended to be computed/inferred.
 //
-// If a submission is missing an artifact ID, then this method first check if an
-// artifact with that slug already exists in KV. If it does, then it pulls the
-// existing artifact ID from KV. This shouldn't happen during normal use, but
-// it's a useful safeguard to ensure that artifact IDs never change.
-//
-// If a submission is missing an artifact ID and the slug does not already exist
-// in KV, then it means it's a new artifact and we generate an artifact ID for
-// it.
+// If a submission is missing an artifact ID, then it means it's a new artifact
+// and we generate an artifact ID for it.
 //
 // If a file in a submission is missing a media type, we check the
 // `Content-Type` header from the source URL.

@@ -74,24 +74,24 @@ const upload = async ({
       // We can skip files that have already been uploaded to S3.
       if (existingMultihashes.has(fileSubmission.multihash)) {
         core.info(
-          `Skipping artifact file: ${submission.slug}/${fileSubmission.fileName}`
+          `Skipping artifact file: ${submission.slug}/${fileSubmission.filename}`
         );
         continue;
       }
 
       const downloadResult = await downloadAndVerify(
-        fileSubmission.sourceUrl,
+        fileSubmission.source_url,
         multihash
       );
 
-      core.info(`Downloaded file: ${fileSubmission.sourceUrl}`);
+      core.info(`Downloaded file: ${fileSubmission.source_url}`);
 
       if (downloadResult.isValid) {
         core.info(
-          `Validated file hash: ${submission.slug}/${fileSubmission.fileName}`
+          `Validated file hash: ${submission.slug}/${fileSubmission.filename}`
         );
         core.info(
-          `Uploading to S3: ${submission.slug}/${fileSubmission.fileName}`
+          `Uploading to S3: ${submission.slug}/${fileSubmission.filename}`
         );
 
         await putArtifactFile({
@@ -100,7 +100,7 @@ const upload = async ({
           filePath: downloadResult.path,
           multihash,
           prefix: params.s3Prefix,
-          mediaType: fileSubmission.mediaType,
+          mediaType: fileSubmission.media_type,
         });
 
         await fsPromises.unlink(downloadResult.path);
@@ -110,8 +110,8 @@ const upload = async ({
         throw new Error(
           `Downloaded file does not match the hash included in the submission: ${
             submission.slug
-          }/${fileSubmission.fileName}\nURL: ${
-            fileSubmission.sourceUrl
+          }/${fileSubmission.filename}\nURL: ${
+            fileSubmission.source_url
           }\nExpected: ${debugPrintDigest(
             multihash
           )}\nActual: ${debugPrintDigest(downloadResult.actualDigest)}`

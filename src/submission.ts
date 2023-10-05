@@ -27,10 +27,10 @@ export const isString = (value: JsonValue): value is string =>
 
 export type IncompleteFileSubmission = Readonly<{
   name: string;
-  fileName: string;
-  mediaType?: string;
+  filename: string;
+  media_type?: string;
   multihash?: string;
-  sourceUrl: URL;
+  source_url: URL;
   lang?: LanguageCode;
   hidden: boolean;
   aliases: ReadonlyArray<string>;
@@ -59,8 +59,8 @@ export type IncompleteArtifactSubmission = Readonly<{
   links: ReadonlyArray<ArtifactLinkSubmission>;
   people: ReadonlyArray<string>;
   identities: ReadonlyArray<string>;
-  fromYear: number;
-  toYear?: number;
+  from_year: number;
+  to_year?: number;
   decades: ReadonlyArray<number>;
   aliases: ReadonlyArray<string>;
 }>;
@@ -95,8 +95,8 @@ export const toApi = (
 
     return {
       name: fileInput.name,
-      filename: fileInput.fileName,
-      media_type: fileInput.mediaType,
+      filename: fileInput.filename,
+      media_type: fileInput.media_type,
       hash: encodedHashFromMultihash(multihash),
       hash_algorithm: algorithmName(multihash.code),
       multihash: fileInput.multihash,
@@ -106,7 +106,7 @@ export const toApi = (
       }),
       url: new URL(
         // We need URL paths use forward slashes, even on Windows.
-        path.posix.join("artifacts", input.slug, fileInput.fileName),
+        path.posix.join("artifacts", input.slug, fileInput.filename),
         params.baseUrl
       ).toString(),
       lang: fileInput.lang,
@@ -120,8 +120,8 @@ export const toApi = (
   })),
   people: input.people,
   identities: input.identities,
-  from_year: input.fromYear,
-  to_year: input.toYear,
+  from_year: input.from_year,
+  to_year: input.to_year,
   decades: input.decades,
   aliases: input.aliases,
 });
