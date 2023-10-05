@@ -228,134 +228,6 @@ exports.newRandomArtifactID = newRandomArtifactID;
 
 /***/ }),
 
-/***/ 18116:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getArtifactIdBySlug = exports.putArtifacts = void 0;
-const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
-const submission_1 = __nccwpck_require__(16307);
-const Version = {
-    artifacts: 2,
-    slugs: 1,
-};
-const putKeys = ({ accountId, secretToken, namespace, objects, }) => __awaiter(void 0, void 0, void 0, function* () {
-    // As of time of writing, the bulk API is documented to accept up to 10,000 KV
-    // pairs at once, with a maximum total request size of 100MB. For simplicity's
-    // sake, we do not attempt to batch multiple bulk API calls and work under the
-    // assumption that we will never exceed these limits.
-    const response = yield (0, node_fetch_1.default)(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/bulk`, {
-        method: "PUT",
-        headers: {
-            Authorization: `Bearer ${secretToken}`,
-            ["Content-Type"]: "application/json",
-        },
-        body: JSON.stringify(objects.map((obj) => (Object.assign({ key: obj.key, value: obj.obj === undefined ? "" : JSON.stringify(obj.obj) }, (obj.metadata !== undefined && { metadata: obj.metadata }))))),
-    });
-    if (!response.ok) {
-        const bodyText = yield response.text();
-        throw new Error(`${response.status} ${response.statusText}\n${bodyText}`);
-    }
-});
-const getKeyMetadata = ({ accountId, secretToken, namespace, key, }) => __awaiter(void 0, void 0, void 0, function* () {
-    const response = yield (0, node_fetch_1.default)(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespace}/metadata/${encodeURIComponent(key)}`, {
-        method: "GET",
-        headers: {
-            Authorization: `Bearer ${secretToken}`,
-            ["Content-Type"]: "application/json",
-        },
-    });
-    if (response.status === 404) {
-        return undefined;
-    }
-    if (!response.ok) {
-        const bodyText = yield response.text();
-        throw new Error(`${response.status} ${response.statusText}\n${bodyText}`);
-    }
-    const responseBody = (yield response.json());
-    return responseBody["result"];
-});
-const artifactListKey = `artifacts:v${Version.artifacts}:`;
-const artifactKey = (artifactId) => `artifacts:v${Version.artifacts}:${artifactId}`;
-const slugKey = (slug) => `slugs:v${Version.slugs}:${slug}`;
-const putArtifacts = ({ accountId, secretToken, namespace, artifacts, }) => __awaiter(void 0, void 0, void 0, function* () {
-    const objects = [];
-    for (const artifact of artifacts) {
-        objects.push({
-            key: artifactKey(artifact.id),
-            obj: artifact,
-        });
-        objects.push({
-            key: slugKey(artifact.slug),
-            metadata: {
-                id: artifact.id,
-            },
-        });
-        for (const slugAlias of artifact.aliases) {
-            objects.push({
-                key: slugKey(slugAlias),
-                metadata: {
-                    id: artifact.id,
-                },
-            });
-        }
-    }
-    const sortedArtifacts = [...artifacts];
-    // We sort the artifacts here so that the API worker doesn't need to. The
-    // order isn't important, but it does need to be deterministic. We sort by the
-    // artifact ID, since that doesn't change, and we specify the locale to sort
-    // in so that the sort order doesn't change.
-    sortedArtifacts.sort((a, b) => a.id.localeCompare(b.id, "en", { usage: "sort" }));
-    objects.push({
-        key: artifactListKey,
-        obj: sortedArtifacts,
-    });
-    yield putKeys({
-        accountId,
-        secretToken,
-        namespace,
-        objects,
-    });
-});
-exports.putArtifacts = putArtifacts;
-const getArtifactIdBySlug = ({ accountId, secretToken, namespace, artifactSlug, }) => __awaiter(void 0, void 0, void 0, function* () {
-    const keyMetadata = yield getKeyMetadata({
-        accountId,
-        secretToken,
-        namespace,
-        key: slugKey(artifactSlug),
-    });
-    if (keyMetadata === undefined) {
-        return undefined;
-    }
-    if (!(0, submission_1.isJsonObject)(keyMetadata)) {
-        throw new Error(`Metadata for this key in KV is not a JSON object: ${slugKey(artifactSlug)}`);
-    }
-    const artifactId = keyMetadata.id;
-    if (!(0, submission_1.isString)(artifactId)) {
-        throw new Error(`Artifact ID in metadata of this key in KV is not a string: ${slugKey(artifactSlug)}`);
-    }
-    return artifactId;
-});
-exports.getArtifactIdBySlug = getArtifactIdBySlug;
-
-
-/***/ }),
-
 /***/ 3109:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -405,14 +277,13 @@ const params_1 = __nccwpck_require__(62017);
 const repo_1 = __nccwpck_require__(58139);
 const schema_1 = __nccwpck_require__(5171);
 const download_1 = __nccwpck_require__(95933);
-const kv_1 = __nccwpck_require__(18116);
 const hash_1 = __nccwpck_require__(41859);
 const s3_1 = __nccwpck_require__(81863);
 const submission_1 = __nccwpck_require__(16307);
 const validate_1 = __nccwpck_require__(81997);
 const validate = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
     core.info("Computing missing submission fields...");
-    const completedSubmissions = yield (0, validate_1.completeArtifactSubmissions)(submissions, params);
+    const completedSubmissions = yield (0, validate_1.completeArtifactSubmissions)(submissions);
     yield (0, validate_1.writeArtifactSubmissions)(completedSubmissions, params);
 });
 const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
@@ -434,38 +305,40 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
             const multihash = (0, hash_1.decodeMultihash)(fileSubmission.multihash);
             // We can skip files that have already been uploaded to S3.
             if (existingMultihashes.has(fileSubmission.multihash)) {
-                core.info(`Skipping artifact file: ${submission.slug}/${fileSubmission.fileName}`);
+                core.info(`Skipping artifact file: ${submission.slug}/${fileSubmission.filename}`);
                 continue;
             }
-            const downloadResult = yield (0, download_1.downloadAndVerify)(fileSubmission.sourceUrl, multihash);
-            core.info(`Downloaded file: ${fileSubmission.sourceUrl}`);
+            const downloadResult = yield (0, download_1.downloadAndVerify)(fileSubmission.source_url, multihash);
+            core.info(`Downloaded file: ${fileSubmission.source_url}`);
             if (downloadResult.isValid) {
-                core.info(`Validated file hash: ${submission.slug}/${fileSubmission.fileName}`);
-                core.info(`Uploading to S3: ${submission.slug}/${fileSubmission.fileName}`);
+                core.info(`Validated file hash: ${submission.slug}/${fileSubmission.filename}`);
+                core.info(`Uploading to S3: ${submission.slug}/${fileSubmission.filename}`);
                 yield (0, s3_1.putArtifactFile)({
                     client: s3Client,
                     bucket: params.s3Bucket,
                     filePath: downloadResult.path,
                     multihash,
                     prefix: params.s3Prefix,
-                    mediaType: fileSubmission.mediaType,
+                    mediaType: fileSubmission.media_type,
                 });
                 yield promises_1.default.unlink(downloadResult.path);
                 filesUploaded += 1;
             }
             else {
-                throw new Error(`Downloaded file does not match the hash included in the submission: ${submission.slug}/${fileSubmission.fileName}\nURL: ${fileSubmission.sourceUrl}\nExpected: ${(0, hash_1.debugPrintDigest)(multihash)}\nActual: ${(0, hash_1.debugPrintDigest)(downloadResult.actualDigest)}`);
+                throw new Error(`Downloaded file does not match the hash included in the submission: ${submission.slug}/${fileSubmission.filename}\nURL: ${fileSubmission.source_url}\nExpected: ${(0, hash_1.debugPrintDigest)(multihash)}\nActual: ${(0, hash_1.debugPrintDigest)(downloadResult.actualDigest)}`);
             }
         }
         artifactMetadataList.push((0, submission_1.toApi)(submission, params));
     }
     core.info(`Writing artifact metadata...`);
-    yield (0, kv_1.putArtifacts)({
-        accountId: params.cloudflareAccountId,
-        secretToken: params.cloudflareApiToken,
-        namespace: params.kvNamespaceId,
-        artifacts: artifactMetadataList,
-    });
+    // TODO: Upload artifacts to submission-worker here!
+    //
+    // await putArtifacts({
+    //   accountId: params.cloudflareAccountId,
+    //   secretToken: params.cloudflareApiToken,
+    //   namespace: params.kvNamespaceId,
+    //   artifacts: artifactMetadataList,
+    // });
     core.info(`Finished writing artifact metadata.`);
     core.setOutput("artifacts", artifactMetadataList);
     core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
@@ -556,22 +429,15 @@ const schema = joi_1.default.object({
     s3Region: joi_1.default.string().required().label("s3_region"),
     s3AccessKeyId: joi_1.default.string().required().label("s3_access_key_id"),
     s3SecretAccessKey: joi_1.default.string().required().label("s3_secret_access_key"),
-    cloudflareAccountId: joi_1.default.string().required().label("cloudflare_account_id"),
-    cloudflareApiToken: joi_1.default.string().required().label("cloudflare_api_token"),
-    kvNamespaceId: joi_1.default.string().required().label("kv_namespace_id"),
 });
 const getParams = () => {
     const s3AccessKeyId = core.getInput("s3_access_key_id", { required: true });
     const s3SecretAccessKey = core.getInput("s3_secret_access_key", {
         required: true,
     });
-    const cloudflareApiToken = core.getInput("cloudflare_api_token", {
-        required: true,
-    });
     // The S3 access key ID isn't strictly a secret, but we're redacting it anyways.
     core.setSecret(s3AccessKeyId);
     core.setSecret(s3SecretAccessKey);
-    core.setSecret(cloudflareApiToken);
     return joi_1.default.attempt({
         mode: core.getInput("mode", { required: true }),
         repo: process.env.GITHUB_WORKSPACE,
@@ -583,11 +449,6 @@ const getParams = () => {
         s3Region: core.getInput("s3_region", { required: true }),
         s3AccessKeyId,
         s3SecretAccessKey,
-        cloudflareAccountId: core.getInput("cloudflare_account_id", {
-            required: true,
-        }),
-        cloudflareApiToken,
-        kvNamespaceId: core.getInput("kv_namespace_id", { required: true }),
     }, schema, { abortEarly: false });
 };
 exports.getParams = getParams;
@@ -600,6 +461,29 @@ exports.getParams = getParams;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -615,19 +499,48 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getSubmissionPath = exports.getSubmissions = void 0;
 const path_1 = __importDefault(__nccwpck_require__(71017));
+const child_process_1 = __nccwpck_require__(32081);
 const promises_1 = __importDefault(__nccwpck_require__(73292));
+const core = __importStar(__nccwpck_require__(42186));
 const submissionFileExt = ".json";
-const listSubmissionFiles = (repoPath, submissionPath) => __awaiter(void 0, void 0, void 0, function* () {
-    const fullPath = path_1.default.join(repoPath, submissionPath);
-    const entries = yield promises_1.default.readdir(fullPath, {
-        withFileTypes: true,
+// This uses git to determine which submission files have been modified between
+// `main` and the PR which triggered this action.
+const listModifiedSubmissionFiles = (repoPath, submissionPath) => __awaiter(void 0, void 0, void 0, function* () {
+    // TODO: This makes a hardcoded assumption about the default branch name.
+    const childProcess = (0, child_process_1.spawn)("git", [
+        "-C",
+        repoPath,
+        "diff",
+        "--name-only",
+        "HEAD",
+        "main",
+        "--",
+        submissionPath,
+    ]);
+    yield new Promise((resolve) => {
+        childProcess.on("close", resolve);
     });
-    return entries
-        .filter((entry) => entry.isFile() && path_1.default.extname(entry.name) === submissionFileExt)
-        .map((entry) => path_1.default.join(fullPath, entry.name));
+    if (childProcess.exitCode !== 0) {
+        throw new Error("git diff returned a non-zero exit code");
+    }
+    let stdout = "";
+    childProcess.on("data", (chunk) => {
+        stdout += chunk.toString();
+    });
+    yield new Promise((resolve) => childProcess.on("exit", resolve));
+    const filePaths = stdout.split("\n");
+    const submissionFilePaths = filePaths
+        .filter((filePath) => path_1.default.extname(filePath) === submissionFileExt)
+        .map((filePath) => path_1.default.join(repoPath, filePath));
+    core.startGroup(`Found ${submissionFilePaths.length} submission files which have been modified`);
+    for (const filePath of submissionFilePaths) {
+        core.info(filePath);
+    }
+    core.endGroup();
+    return submissionFilePaths;
 });
 const getSubmissions = (repoPath, submissionPath) => __awaiter(void 0, void 0, void 0, function* () {
-    const fileNames = yield listSubmissionFiles(repoPath, submissionPath);
+    const fileNames = yield listModifiedSubmissionFiles(repoPath, submissionPath);
     const submissions = [];
     for (const fileName of fileNames) {
         const fileContent = yield promises_1.default.readFile(fileName, {
@@ -791,20 +704,20 @@ exports.schema = joi_1.default.object({
     summary: joi_1.default.string().trim().max(150).empty("").required(),
     description: joi_1.default.string().trim().max(1000).empty(""),
     files: joi_1.default.array()
-        .unique((a, b) => a.fileName === b.fileName ||
+        .unique((a, b) => a.file_name === b.file_name ||
         // If two files have the same URL but different hashes, they can't both
         // be valid.
-        (a.sourceUrl === b.sourceUrl && a.multihash !== b.multihash))
+        (a.source_url === b.source_url && a.multihash !== b.multihash))
         .items(joi_1.default.object({
         name: joi_1.default.string().max(256).empty("").required(),
-        fileName: joi_1.default.string().pattern(fileNamePattern).empty("").required(),
-        mediaType: joi_1.default.string().pattern(mediaTypePattern).empty(""),
+        file_name: joi_1.default.string().pattern(fileNamePattern).empty("").required(),
+        media_type: joi_1.default.string().pattern(mediaTypePattern).empty(""),
         multihash: joi_1.default.when(joi_1.default.ref("$mode"), {
             is: "validate",
             then: joi_1.default.string().hex().empty(""),
             otherwise: joi_1.default.string().hex().empty("").required(),
         }),
-        sourceUrl: joi_1.default.string()
+        source_url: joi_1.default.string()
             // We allow HTTP URLs for importing only because we're validating their checksums
             // anyways.
             .uri({ scheme: ["http", "https"] })
@@ -829,10 +742,10 @@ exports.schema = joi_1.default.object({
         .default([]),
     people: joi_1.default.array().unique().items(joi_1.default.string().empty("")).default([]),
     identities: joi_1.default.array().unique().items(joi_1.default.string().empty("")).default([]),
-    fromYear: joi_1.default.number().integer().max(new Date().getUTCFullYear()).required(),
-    toYear: joi_1.default.number()
+    from_year: joi_1.default.number().integer().max(new Date().getUTCFullYear()).required(),
+    to_year: joi_1.default.number()
         .integer()
-        .greater(joi_1.default.ref("fromYear"))
+        .greater(joi_1.default.ref("from_year"))
         .max(new Date().getUTCFullYear()),
     decades: joi_1.default.array()
         .unique()
@@ -840,12 +753,12 @@ exports.schema = joi_1.default.object({
         .items(joi_1.default.number()
         .integer()
         .multiple(10)
-        .equal(joi_1.default.ref("...fromYear", { adjust: decadeFromYear }))
+        .equal(joi_1.default.ref("...from_year", { adjust: decadeFromYear }))
         .required(), joi_1.default.number()
         .integer()
         .multiple(10)
-        .min(joi_1.default.ref("...fromYear", { adjust: decadeFromYear }))
-        .max(joi_1.default.ref("...toYear", { adjust: decadeFromYear })))
+        .min(joi_1.default.ref("...from_year", { adjust: decadeFromYear }))
+        .max(joi_1.default.ref("...to_year", { adjust: decadeFromYear })))
         .default([]),
     aliases: joi_1.default.array()
         .unique()
@@ -886,18 +799,18 @@ const toApi = (input, params) => ({
         const multihash = (0, hash_1.decodeMultihash)(fileInput.multihash);
         return {
             name: fileInput.name,
-            fileName: fileInput.fileName,
-            mediaType: fileInput.mediaType,
+            filename: fileInput.filename,
+            media_type: fileInput.media_type,
             hash: (0, hash_1.encodedHashFromMultihash)(multihash),
-            hashAlgorithm: (0, hash_1.algorithmName)(multihash.code),
+            hash_algorithm: (0, hash_1.algorithmName)(multihash.code),
             multihash: fileInput.multihash,
-            storageKey: (0, s3_1.keyFromMultihash)({
+            storage_key: (0, s3_1.keyFromMultihash)({
                 prefix: params.s3Prefix,
                 multihash: fileInput.multihash,
             }),
             url: new URL(
             // We need URL paths use forward slashes, even on Windows.
-            path_1.default.posix.join("artifacts", input.slug, fileInput.fileName), params.baseUrl).toString(),
+            path_1.default.posix.join("artifacts", input.slug, fileInput.filename), params.baseUrl).toString(),
             lang: fileInput.lang,
             hidden: fileInput.hidden,
             aliases: fileInput.aliases,
@@ -909,8 +822,8 @@ const toApi = (input, params) => ({
     })),
     people: input.people,
     identities: input.identities,
-    fromYear: input.fromYear,
-    toYear: input.toYear,
+    from_year: input.from_year,
+    to_year: input.to_year,
     decades: input.decades,
     aliases: input.aliases,
 });
@@ -966,7 +879,6 @@ const promises_1 = __importDefault(__nccwpck_require__(73292));
 const download_1 = __nccwpck_require__(95933);
 const hash_1 = __nccwpck_require__(41859);
 const id_1 = __nccwpck_require__(33064);
-const kv_1 = __nccwpck_require__(18116);
 const repo_1 = __nccwpck_require__(58139);
 // To avoid unnecessary noise in the git diffs, this should match the
 // indentation used for pretty-printing the submission JSON in the artifact
@@ -975,7 +887,7 @@ const jsonPrettyPrintIndent = 2;
 const completeFileDetails = (submissions) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     core.debug(`Completing file details of ${submissions.length} submissions.`);
-    const incompleteDetailsMap = new Map(submissions.flatMap(({ files }) => files.map(({ sourceUrl, multihash, mediaType }) => [
+    const incompleteDetailsMap = new Map(submissions.flatMap(({ files }) => files.map(({ source_url: sourceUrl, multihash, media_type: mediaType }) => [
         sourceUrl,
         {
             multihash,
@@ -1019,58 +931,35 @@ const completeFileDetails = (submissions) => __awaiter(void 0, void 0, void 0, f
 const applyFileDetails = (files, detailsMap) => __awaiter(void 0, void 0, void 0, function* () {
     return files.map((fileSubmission) => {
         const currentMultihash = fileSubmission.multihash;
-        const currentMediaType = fileSubmission.mediaType;
+        const currentMediaType = fileSubmission.media_type;
         if (currentMultihash === undefined) {
-            const details = detailsMap.get(fileSubmission.sourceUrl);
+            const details = detailsMap.get(fileSubmission.source_url);
             if (details === undefined) {
-                throw new Error(`Unexpected file URL: ${fileSubmission.sourceUrl}\nThis is most likely a bug.`);
+                throw new Error(`Unexpected file URL: ${fileSubmission.source_url}\nThis is most likely a bug.`);
             }
-            return Object.assign(Object.assign({}, fileSubmission), { mediaType: currentMediaType !== null && currentMediaType !== void 0 ? currentMediaType : details.mediaType, multihash: details.multihash });
+            return Object.assign(Object.assign({}, fileSubmission), { media_type: currentMediaType !== null && currentMediaType !== void 0 ? currentMediaType : details.mediaType, multihash: details.multihash });
         }
         else {
             return Object.assign(Object.assign({}, fileSubmission), { multihash: currentMultihash });
         }
     });
 });
-// If there is already an existing artifact with this slug in KV, get its
-// artifact ID. Otherwise, generate a new one.
-const getOrCreateArtifactId = (artifactSlug, params) => __awaiter(void 0, void 0, void 0, function* () {
-    const idOfExistingArtifact = yield (0, kv_1.getArtifactIdBySlug)({
-        accountId: params.cloudflareAccountId,
-        secretToken: params.cloudflareApiToken,
-        namespace: params.kvNamespaceId,
-        artifactSlug,
-    });
-    if (idOfExistingArtifact !== undefined) {
-        core.warning(`Artifact is missing its ID, but the slug exists in KV: ${artifactSlug}\nGetting the existing artifact ID from KV.`);
-        return idOfExistingArtifact;
-    }
-    core.info(`Generating an artifact ID for a new artifact: ${artifactSlug}`);
-    return (0, id_1.newRandomArtifactID)();
-});
 // Make "incomplete" artifact submissions "complete" by filling in missing
 // fields which are intended to be computed/inferred.
 //
-// If a submission is missing an artifact ID, then this method first check if an
-// artifact with that slug already exists in KV. If it does, then it pulls the
-// existing artifact ID from KV. This shouldn't happen during normal use, but
-// it's a useful safeguard to ensure that artifact IDs never change.
-//
-// If a submission is missing an artifact ID and the slug does not already exist
-// in KV, then it means it's a new artifact and we generate an artifact ID for
-// it.
+// If a submission is missing an artifact ID, then it means it's a new artifact
+// and we generate an artifact ID for it.
 //
 // If a file in a submission is missing a media type, we check the
 // `Content-Type` header from the source URL.
 //
 // If a file in a submission is missing a multihash, we download the file from
 // the source URL and compute the hash.
-const completeArtifactSubmissions = (submissions, params) => __awaiter(void 0, void 0, void 0, function* () {
+const completeArtifactSubmissions = (submissions) => __awaiter(void 0, void 0, void 0, function* () {
     const fileDetailsMap = yield completeFileDetails(submissions);
     return yield Promise.all(submissions.map((incompleteSubmission) => __awaiter(void 0, void 0, void 0, function* () {
-        return Object.assign(Object.assign({}, incompleteSubmission), { id: incompleteSubmission.id === undefined
-                ? yield getOrCreateArtifactId(incompleteSubmission.slug, params)
-                : incompleteSubmission.id, files: yield applyFileDetails(incompleteSubmission.files, fileDetailsMap) });
+        var _c;
+        return Object.assign(Object.assign({}, incompleteSubmission), { id: (_c = incompleteSubmission.id) !== null && _c !== void 0 ? _c : (0, id_1.newRandomArtifactID)(), files: yield applyFileDetails(incompleteSubmission.files, fileDetailsMap) });
     })));
 });
 exports.completeArtifactSubmissions = completeArtifactSubmissions;
