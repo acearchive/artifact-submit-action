@@ -34,7 +34,7 @@ export const schema = Joi.object({
   files: Joi.array()
     .unique(
       (a, b) =>
-        a.file_name === b.file_name ||
+        a.filename === b.filename ||
         // If two files have the same URL but different hashes, they can't both
         // be valid.
         (a.source_url === b.source_url && a.multihash !== b.multihash)
@@ -42,7 +42,7 @@ export const schema = Joi.object({
     .items(
       Joi.object({
         name: Joi.string().max(256).empty("").required(),
-        file_name: Joi.string().pattern(fileNamePattern).empty("").required(),
+        filename: Joi.string().pattern(fileNamePattern).empty("").required(),
         media_type: Joi.string().pattern(mediaTypePattern).empty(""),
         multihash: Joi.when(Joi.ref("$mode"), {
           is: "validate",
