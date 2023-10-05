@@ -20,6 +20,7 @@ import {
   completeArtifactSubmissions,
   writeArtifactSubmissions,
 } from "./validate";
+import { uploadMetadata } from "./db";
 
 const validate = async ({
   params,
@@ -118,18 +119,7 @@ const upload = async ({
     artifactMetadataList.push(toApi(submission, params));
   }
 
-  core.info(`Writing artifact metadata...`);
-
-  // TODO: Upload artifacts to submission-worker here!
-  //
-  // await putArtifacts({
-  //   accountId: params.cloudflareAccountId,
-  //   secretToken: params.cloudflareApiToken,
-  //   namespace: params.kvNamespaceId,
-  //   artifacts: artifactMetadataList,
-  // });
-
-  core.info(`Finished writing artifact metadata.`);
+  await uploadMetadata(artifactMetadataList, params.submissionWorkerSecret);
 
   core.setOutput("artifacts", artifactMetadataList);
 
