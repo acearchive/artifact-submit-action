@@ -1,25 +1,63 @@
 import path from "path";
+import { spawn } from "child_process";
 import fsPromises from "fs/promises";
 import { JsonObject } from "./submission";
 
+import * as core from "@actions/core";
+
 const submissionFileExt = ".json";
 
-const listSubmissionFiles = async (
+// This uses git to determine which submission files have been modified between
+// `main` and the PR which triggered this action.
+const listModifiedSubmissionFiles = async (
   repoPath: string,
   submissionPath: string
 ): Promise<ReadonlyArray<string>> => {
-  const fullPath = path.join(repoPath, submissionPath);
+  // TODO: This makes a hardcoded assumption about the default branch name.
+  const childProcess = spawn("git", [
+    "-C",
+    repoPath,
+    "diff",
+    "--name-only",
+    "HEAD",
+    "main",
+    "--",
+    submissionPath,
+  ]);
 
-  const entries = await fsPromises.readdir(fullPath, {
-    withFileTypes: true,
+  await new Promise((resolve) => {
+    childProcess.on("close", resolve);
   });
 
-  return entries
-    .filter(
-      (entry) =>
-        entry.isFile() && path.extname(entry.name) === submissionFileExt
-    )
-    .map((entry) => path.join(fullPath, entry.name));
+  if (childProcess.exitCode !== 0) {
+    throw new Error("git diff returned a non-zero exit code");
+  }
+
+  let stdout = "";
+
+  childProcess.on("data", (chunk) => {
+    stdout += chunk.toString();
+  });
+
+  await new Promise((resolve) => childProcess.on("exit", resolve));
+
+  const filePaths = stdout.split("\n");
+
+  const submissionFilePaths = filePaths
+    .filter((filePath) => path.extname(filePath) === submissionFileExt)
+    .map((filePath) => path.join(repoPath, filePath));
+
+  core.startGroup(
+    `Found ${submissionFilePaths.length} submission files which have been modified`
+  );
+
+  for (const filePath of submissionFilePaths) {
+    core.info(filePath);
+  }
+
+  core.endGroup();
+
+  return submissionFilePaths;
 };
 
 export type RawSubmission = Readonly<{
@@ -31,7 +69,7 @@ export const getSubmissions = async (
   repoPath: string,
   submissionPath: string
 ): Promise<ReadonlyArray<RawSubmission>> => {
-  const fileNames = await listSubmissionFiles(repoPath, submissionPath);
+  const fileNames = await listModifiedSubmissionFiles(repoPath, submissionPath);
 
   const submissions: RawSubmission[] = [];
 
