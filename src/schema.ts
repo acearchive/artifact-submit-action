@@ -34,22 +34,22 @@ export const schema = Joi.object({
   files: Joi.array()
     .unique(
       (a, b) =>
-        a.fileName === b.fileName ||
+        a.file_name === b.file_name ||
         // If two files have the same URL but different hashes, they can't both
         // be valid.
-        (a.sourceUrl === b.sourceUrl && a.multihash !== b.multihash)
+        (a.source_url === b.source_url && a.multihash !== b.multihash)
     )
     .items(
       Joi.object({
         name: Joi.string().max(256).empty("").required(),
-        fileName: Joi.string().pattern(fileNamePattern).empty("").required(),
-        mediaType: Joi.string().pattern(mediaTypePattern).empty(""),
+        file_name: Joi.string().pattern(fileNamePattern).empty("").required(),
+        media_type: Joi.string().pattern(mediaTypePattern).empty(""),
         multihash: Joi.when(Joi.ref("$mode"), {
           is: "validate",
           then: Joi.string().hex().empty(""),
           otherwise: Joi.string().hex().empty("").required(),
         }),
-        sourceUrl: Joi.string()
+        source_url: Joi.string()
           // We allow HTTP URLs for importing only because we're validating their checksums
           // anyways.
           .uri({ scheme: ["http", "https"] })
@@ -77,10 +77,10 @@ export const schema = Joi.object({
     .default([]),
   people: Joi.array().unique().items(Joi.string().empty("")).default([]),
   identities: Joi.array().unique().items(Joi.string().empty("")).default([]),
-  fromYear: Joi.number().integer().max(new Date().getUTCFullYear()).required(),
-  toYear: Joi.number()
+  from_year: Joi.number().integer().max(new Date().getUTCFullYear()).required(),
+  to_year: Joi.number()
     .integer()
-    .greater(Joi.ref("fromYear"))
+    .greater(Joi.ref("from_year"))
     .max(new Date().getUTCFullYear()),
   decades: Joi.array()
     .unique()
@@ -89,13 +89,13 @@ export const schema = Joi.object({
       Joi.number()
         .integer()
         .multiple(10)
-        .equal(Joi.ref("...fromYear", { adjust: decadeFromYear }))
+        .equal(Joi.ref("...from_year", { adjust: decadeFromYear }))
         .required(),
       Joi.number()
         .integer()
         .multiple(10)
-        .min(Joi.ref("...fromYear", { adjust: decadeFromYear }))
-        .max(Joi.ref("...toYear", { adjust: decadeFromYear }))
+        .min(Joi.ref("...from_year", { adjust: decadeFromYear }))
+        .max(Joi.ref("...to_year", { adjust: decadeFromYear }))
     )
     .default([]),
   aliases: Joi.array()
