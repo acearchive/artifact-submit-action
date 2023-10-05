@@ -23,6 +23,11 @@ inputs:
     description: >
       The base URL that artifact files will be hosted from.
     required: true
+  base_ref:
+    description: >
+      The ref of the base branch, used to determine which files have changed in
+      this PR.
+    required: true
   s3_endpoint:
     description: >
       The S3 endpoint URL. This is only required when using a non-AWS

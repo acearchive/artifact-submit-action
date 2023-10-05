@@ -140,7 +140,11 @@ const upload = async ({
 
 const main = async (): Promise<void> => {
   const params = getParams();
-  const rawSubmissions = await getSubmissions(params.repo, params.path);
+  const rawSubmissions = await getSubmissions({
+    repoPath: params.repo,
+    submissionPath: params.path,
+    baseRef: params.baseRef,
+  });
   const setOfAllSlugs = allSlugsInSubmissions(rawSubmissions);
 
   core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);

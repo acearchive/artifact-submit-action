@@ -9,18 +9,23 @@ const submissionFileExt = ".json";
 
 // This uses git to determine which submission files have been modified between
 // `main` and the PR which triggered this action.
-const listModifiedSubmissionFiles = async (
-  repoPath: string,
-  submissionPath: string
-): Promise<ReadonlyArray<string>> => {
+const listModifiedSubmissionFiles = async ({
+  repoPath,
+  submissionPath,
+  baseRef,
+}: {
+  repoPath: string;
+  submissionPath: string;
+  baseRef: string;
+}): Promise<ReadonlyArray<string>> => {
   // TODO: This makes a hardcoded assumption about the default branch name.
   const childProcess = spawn("git", [
     "-C",
     repoPath,
     "diff",
     "--name-only",
+    baseRef,
     "HEAD",
-    "main",
     "--",
     submissionPath,
   ]);
@@ -68,11 +73,20 @@ export type RawSubmission = Readonly<{
   fileName: string;
 }>;
 
-export const getSubmissions = async (
-  repoPath: string,
-  submissionPath: string
-): Promise<ReadonlyArray<RawSubmission>> => {
-  const fileNames = await listModifiedSubmissionFiles(repoPath, submissionPath);
+export const getSubmissions = async ({
+  repoPath,
+  submissionPath,
+  baseRef,
+}: {
+  repoPath: string;
+  submissionPath: string;
+  baseRef: string;
+}): Promise<ReadonlyArray<RawSubmission>> => {
+  const fileNames = await listModifiedSubmissionFiles({
+    repoPath,
+    submissionPath,
+    baseRef,
+  });
 
   const submissions: RawSubmission[] = [];
 
