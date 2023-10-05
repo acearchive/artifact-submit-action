@@ -24,7 +24,9 @@ const listModifiedSubmissionFiles = async ({
     repoPath,
     "diff",
     "--name-only",
-    baseRef,
+    // To see why we need the `origin/` part:
+    // https://github.com/actions/checkout/issues/118
+    `origin/${baseRef}`,
     "HEAD",
     "--",
     submissionPath,
