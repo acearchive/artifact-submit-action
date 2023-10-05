@@ -521,13 +521,18 @@ const listModifiedSubmissionFiles = (repoPath, submissionPath) => __awaiter(void
         childProcess.on("close", resolve);
     });
     if (childProcess.exitCode !== 0) {
-        throw new Error("git diff returned a non-zero exit code");
+        let stderr = "";
+        childProcess.stderr.on("data", (chunk) => {
+            stderr += chunk.toString();
+        });
+        yield new Promise((resolve) => childProcess.stderr.on("exit", resolve));
+        throw new Error(`git diff returned a non-zero exit code: ${stderr}`);
     }
     let stdout = "";
-    childProcess.on("data", (chunk) => {
+    childProcess.stdout.on("data", (chunk) => {
         stdout += chunk.toString();
     });
-    yield new Promise((resolve) => childProcess.on("exit", resolve));
+    yield new Promise((resolve) => childProcess.stdout.on("exit", resolve));
     const filePaths = stdout.split("\n");
     const submissionFilePaths = filePaths
         .filter((filePath) => path_1.default.extname(filePath) === submissionFileExt)
