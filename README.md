@@ -15,18 +15,25 @@ step in the job can then commit these changes back to the repo.
 - Uploads files to Ace Archive.
 
 Artifact files are stored in [Cloudflare
-R2](https://developers.cloudflare.com/r2) and artifact metadata is stored in
-[Workers KV](https://developers.cloudflare.com/workers/learning/how-kv-works).
-Before a file is uploaded to R2, its hash is validated against the hash included
-in the JSON submission file to ensure it has not changed since it was manually
-reviewed.
+R2](https://developers.cloudflare.com/r2). Before a file is uploaded to R2, its
+hash is validated against the hash included in the JSON submission file to
+ensure it has not changed since it was manually reviewed.
 
-Because Workers KV is an eventually consistent system, only one instance of this
-action should ever be writing to the same KV namespace at a time. You can set
-[`concurrency`](https://docs.github.com/en/actions/using-jobs/using-concurrency)
-in a GitHub Actions workflow to ensure this.
+Artifact metadata is stored in [Cloudflare
+D1](https://developers.cloudflare.com/d1). This happens by `POST`ing a JSON
+document to
+[submission-worker](https://github.com/acearchive/submission-worker), which then
+adds the metadata to the database.
 
 See the [`action.yaml`](./action.yaml) for documentation of the input
 parameters. See
 [acearchive/artifact-submissions](https://github.com/acearchive/artifact-submissions/tree/main/.github/workflows)
 for an example of this action in use.
+
+Because this is a GitHub Action written in TypeScript, you need to compile it to
+JS and commit that generated code to the repo. You can do that like this:
+
+```shell
+npm run all
+commit -am 'Commit generated code'
+```
