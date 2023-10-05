@@ -503,6 +503,14 @@ const child_process_1 = __nccwpck_require__(32081);
 const promises_1 = __importDefault(__nccwpck_require__(73292));
 const core = __importStar(__nccwpck_require__(42186));
 const submissionFileExt = ".json";
+const readStreamToString = (stream) => __awaiter(void 0, void 0, void 0, function* () {
+    let output = "";
+    stream.on("data", (chunk) => {
+        output += chunk;
+    });
+    yield new Promise((resolve) => stream.on("end", resolve));
+    return output;
+});
 // This uses git to determine which submission files have been modified between
 // `main` and the PR which triggered this action.
 const listModifiedSubmissionFiles = (repoPath, submissionPath) => __awaiter(void 0, void 0, void 0, function* () {
@@ -517,22 +525,20 @@ const listModifiedSubmissionFiles = (repoPath, submissionPath) => __awaiter(void
         "--",
         submissionPath,
     ]);
+    let stdout = "";
+    let stderr = "";
+    childProcess.stdout.on("data", (chunk) => {
+        stdout += chunk;
+    });
+    childProcess.stderr.on("data", (chunk) => {
+        stderr += chunk;
+    });
     yield new Promise((resolve) => {
         childProcess.on("close", resolve);
     });
     if (childProcess.exitCode !== 0) {
-        let stderr = "";
-        childProcess.stderr.on("data", (chunk) => {
-            stderr += chunk.toString();
-        });
-        yield new Promise((resolve) => childProcess.stderr.on("exit", resolve));
         throw new Error(`git diff returned a non-zero exit code: ${stderr}`);
     }
-    let stdout = "";
-    childProcess.stdout.on("data", (chunk) => {
-        stdout += chunk.toString();
-    });
-    yield new Promise((resolve) => childProcess.stdout.on("exit", resolve));
     const filePaths = stdout.split("\n");
     const submissionFilePaths = filePaths
         .filter((filePath) => path_1.default.extname(filePath) === submissionFileExt)
