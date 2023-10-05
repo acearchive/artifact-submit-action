@@ -3,13 +3,19 @@ import fetch from "node-fetch";
 
 import { Artifact } from "./api";
 
-const metadataSubmitUrl = "https://submit.acearchive.lgbt/submit";
 const authUser = "artifact-submit-action";
 
-export const uploadMetadata = async (
-  artifacts: ReadonlyArray<Artifact>,
-  authSecret: string
-) => {
+// This uploads the artifact metadata to the database via a Cloudflare Worker
+// named submission-worker.
+export const uploadMetadata = async ({
+  artifacts,
+  authSecret,
+  workerDomain,
+}: {
+  artifacts: ReadonlyArray<Artifact>;
+  authSecret: string;
+  workerDomain: string;
+}) => {
   core.startGroup("Uploading metadata for artifacts...");
 
   for (const artifact of artifacts) {
@@ -17,7 +23,7 @@ export const uploadMetadata = async (
 
     const authCredential = `${authUser}:${authSecret}`;
 
-    const resp = await fetch(metadataSubmitUrl, {
+    const resp = await fetch(`https://${workerDomain}/submit`, {
       method: "POST",
       body: JSON.stringify(artifact),
       headers: {

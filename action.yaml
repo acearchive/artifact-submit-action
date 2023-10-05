@@ -52,6 +52,11 @@ inputs:
     description: >
       The secret access key for S3.
     required: true
+  submission_worker_domain:
+    description: >
+      The domain name of the submission-worker instance used to upload metadata
+      to the database.
+    required: true
   submission_worker_secret:
     description: >
       The secret used to authenticate with submission-worker in order to upload

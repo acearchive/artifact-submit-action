@@ -17,6 +17,7 @@ export type Params = Readonly<{
   s3Region: string;
   s3AccessKeyId: string;
   s3SecretAccessKey: string;
+  submissionWorkerDomain: string;
   submissionWorkerSecret: string;
 }>;
 
@@ -32,6 +33,7 @@ const schema = Joi.object({
   s3Region: Joi.string().required().label("s3_region"),
   s3AccessKeyId: Joi.string().required().label("s3_access_key_id"),
   s3SecretAccessKey: Joi.string().required().label("s3_secret_access_key"),
+  submissionWorkerDomain: Joi.string().uri().label("submission_worker_domain"),
   submissionWorkerSecret: Joi.string()
     .required()
     .label("submission_worker_secret"),
@@ -62,6 +64,9 @@ export const getParams = (): Params => {
       s3Bucket: core.getInput("s3_bucket", { required: true }),
       s3Prefix: core.getInput("s3_prefix", { required: true }),
       s3Region: core.getInput("s3_region", { required: true }),
+      submissionWorkerDomain: core.getInput("submission_worker_domain", {
+        required: true,
+      }),
       s3AccessKeyId,
       s3SecretAccessKey,
       submissionWorkerSecret,

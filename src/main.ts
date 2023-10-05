@@ -119,7 +119,12 @@ const upload = async ({
     artifactMetadataList.push(toApi(submission, params));
   }
 
-  await uploadMetadata(artifactMetadataList, params.submissionWorkerSecret);
+  // Upload metadata to the database.
+  await uploadMetadata({
+    artifacts: artifactMetadataList,
+    authSecret: params.submissionWorkerSecret,
+    workerDomain: params.submissionWorkerDomain,
+  });
 
   core.setOutput("artifacts", artifactMetadataList);
 
