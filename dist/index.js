@@ -346,7 +346,11 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
 });
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const params = (0, params_1.getParams)();
-    const rawSubmissions = yield (0, repo_1.getSubmissions)(params.repo, params.path);
+    const rawSubmissions = yield (0, repo_1.getSubmissions)({
+        repoPath: params.repo,
+        submissionPath: params.path,
+        baseRef: params.baseRef,
+    });
     const setOfAllSlugs = (0, validate_1.allSlugsInSubmissions)(rawSubmissions);
     core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
     const submissions = new Array();
@@ -423,6 +427,7 @@ const schema = joi_1.default.object({
     repo: joi_1.default.string().required().label("GITHUB_WORKSPACE"),
     path: joi_1.default.string().uri({ relativeOnly: true }).required().label("path"),
     baseUrl: joi_1.default.string().uri({ scheme: "https" }).required().label("base_url"),
+    baseRef: joi_1.default.string().required().label("base_ref"),
     s3Endpoint: joi_1.default.string().uri().label("s3_endpoint"),
     s3Bucket: joi_1.default.string().required().label("s3_bucket"),
     s3Prefix: joi_1.default.string().required().label("s3_prefix"),
@@ -443,6 +448,7 @@ const getParams = () => {
         repo: process.env.GITHUB_WORKSPACE,
         path: core.getInput("path", { required: true }),
         baseUrl: core.getInput("base_url", { required: true }),
+        baseRef: core.getInput("base_ref", { required: true }),
         s3Endpoint: core.getInput("s3_endpoint"),
         s3Bucket: core.getInput("s3_bucket", { required: true }),
         s3Prefix: core.getInput("s3_prefix", { required: true }),
@@ -505,15 +511,15 @@ const core = __importStar(__nccwpck_require__(42186));
 const submissionFileExt = ".json";
 // This uses git to determine which submission files have been modified between
 // `main` and the PR which triggered this action.
-const listModifiedSubmissionFiles = (repoPath, submissionPath) => __awaiter(void 0, void 0, void 0, function* () {
+const listModifiedSubmissionFiles = ({ repoPath, submissionPath, baseRef, }) => __awaiter(void 0, void 0, void 0, function* () {
     // TODO: This makes a hardcoded assumption about the default branch name.
     const childProcess = (0, child_process_1.spawn)("git", [
         "-C",
         repoPath,
         "diff",
         "--name-only",
+        baseRef,
         "HEAD",
-        "main",
         "--",
         submissionPath,
     ]);
@@ -542,8 +548,12 @@ const listModifiedSubmissionFiles = (repoPath, submissionPath) => __awaiter(void
     core.endGroup();
     return submissionFilePaths;
 });
-const getSubmissions = (repoPath, submissionPath) => __awaiter(void 0, void 0, void 0, function* () {
-    const fileNames = yield listModifiedSubmissionFiles(repoPath, submissionPath);
+const getSubmissions = ({ repoPath, submissionPath, baseRef, }) => __awaiter(void 0, void 0, void 0, function* () {
+    const fileNames = yield listModifiedSubmissionFiles({
+        repoPath,
+        submissionPath,
+        baseRef,
+    });
     const submissions = [];
     for (const fileName of fileNames) {
         const fileContent = yield promises_1.default.readFile(fileName, {
