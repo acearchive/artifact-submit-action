@@ -47,18 +47,6 @@ inputs:
     description: >
       The secret access key for S3.
     required: true
-  cloudflare_account_id:
-    description: >
-      The Cloudflare account ID for Workers KV.
-    required: true
-  cloudflare_api_token:
-    description: >
-      The secret Cloudflare API token to authenticate with Workers KV.
-    required: true
-  kv_namespace_id:
-    description: >
-      The namespace ID for Cloudflare Workers KV.
-    required: true
 outputs:
   artifacts:
     description: >

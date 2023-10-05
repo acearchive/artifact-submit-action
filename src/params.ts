@@ -16,9 +16,6 @@ export type Params = Readonly<{
   s3Region: string;
   s3AccessKeyId: string;
   s3SecretAccessKey: string;
-  cloudflareAccountId: string;
-  cloudflareApiToken: string;
-  kvNamespaceId: string;
 }>;
 
 const schema = Joi.object({
@@ -32,9 +29,6 @@ const schema = Joi.object({
   s3Region: Joi.string().required().label("s3_region"),
   s3AccessKeyId: Joi.string().required().label("s3_access_key_id"),
   s3SecretAccessKey: Joi.string().required().label("s3_secret_access_key"),
-  cloudflareAccountId: Joi.string().required().label("cloudflare_account_id"),
-  cloudflareApiToken: Joi.string().required().label("cloudflare_api_token"),
-  kvNamespaceId: Joi.string().required().label("kv_namespace_id"),
 });
 
 export const getParams = (): Params => {
@@ -42,14 +36,10 @@ export const getParams = (): Params => {
   const s3SecretAccessKey = core.getInput("s3_secret_access_key", {
     required: true,
   });
-  const cloudflareApiToken = core.getInput("cloudflare_api_token", {
-    required: true,
-  });
 
   // The S3 access key ID isn't strictly a secret, but we're redacting it anyways.
   core.setSecret(s3AccessKeyId);
   core.setSecret(s3SecretAccessKey);
-  core.setSecret(cloudflareApiToken);
 
   return Joi.attempt(
     {
@@ -63,11 +53,6 @@ export const getParams = (): Params => {
       s3Region: core.getInput("s3_region", { required: true }),
       s3AccessKeyId,
       s3SecretAccessKey,
-      cloudflareAccountId: core.getInput("cloudflare_account_id", {
-        required: true,
-      }),
-      cloudflareApiToken,
-      kvNamespaceId: core.getInput("kv_namespace_id", { required: true }),
     },
     schema,
     { abortEarly: false }
