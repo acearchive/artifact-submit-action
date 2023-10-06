@@ -29,7 +29,6 @@ const validate = async ({
   params: Params;
   submissions: ReadonlyArray<IncompleteArtifactSubmission>;
 }): Promise<void> => {
-  core.info("Computing missing submission fields...");
   const completedSubmissions = await completeArtifactSubmissions(submissions);
   await writeArtifactSubmissions(completedSubmissions, params);
 };
@@ -41,7 +40,7 @@ const upload = async ({
   params: Params;
   submissions: ReadonlyArray<IncompleteArtifactSubmission>;
 }): Promise<void> => {
-  core.info("Starting the upload process...");
+  core.info("Starting the upload process");
 
   const s3Client = newClient(params);
   const existingMultihashes = await listMultihashes({
@@ -51,24 +50,26 @@ const upload = async ({
   });
 
   core.info(
-    `Found ${existingMultihashes.size} artifact files in the S3 bucket.`
+    `Found ${existingMultihashes.size} artifact files in the R2 bucket`
   );
 
   let filesUploaded = 0;
 
   const artifactMetadataList: Artifact[] = [];
 
+  core.startGroup("Fetching files and uploading to R2");
+
   for (const submission of submissions) {
     if (!isSubmissionValidated(submission)) {
       throw new Error(
-        `Submission is missing mandatory fields which can be generated: ${submission.slug}\nYou must run in \`validate\` mode first to compute missing fields.`
+        `Submission is missing mandatory fields which can be generated: ${submission.slug}\nYou must run in \`validate\` mode first to compute missing fields`
       );
     }
 
     for (const fileSubmission of submission.files) {
       const multihash = decodeMultihash(fileSubmission.multihash);
 
-      // We can skip files that have already been uploaded to S3.
+      // We can skip files that have already been uploaded to R2.
       if (existingMultihashes.has(fileSubmission.multihash)) {
         core.info(
           `Skipping artifact file: ${submission.slug}/${fileSubmission.filename}`
@@ -88,7 +89,7 @@ const upload = async ({
           `Validated file hash: ${submission.slug}/${fileSubmission.filename}`
         );
         core.info(
-          `Uploading to S3: ${submission.slug}/${fileSubmission.filename}`
+          `Uploading to R2: ${submission.slug}/${fileSubmission.filename}`
         );
 
         await putArtifactFile({
@@ -119,6 +120,10 @@ const upload = async ({
     artifactMetadataList.push(toApi(submission, params));
   }
 
+  core.endGroup();
+
+  core.info(`Uploaded ${filesUploaded} files to R2`);
+
   // Upload metadata to the database.
   await uploadMetadata({
     artifacts: artifactMetadataList,
@@ -128,9 +133,7 @@ const upload = async ({
 
   core.setOutput("artifacts", artifactMetadataList);
 
-  core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
-
-  core.info(`Uploaded ${filesUploaded} files to S3.`);
+  core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts`);
 };
 
 const main = async (): Promise<void> => {
@@ -140,9 +143,8 @@ const main = async (): Promise<void> => {
     submissionPath: params.path,
     baseRef: params.baseRef,
   });
-  const setOfAllSlugs = allSlugsInSubmissions(rawSubmissions);
 
-  core.info(`Found ${rawSubmissions.length} JSON files in: ${params.path}`);
+  const setOfAllSlugs = allSlugsInSubmissions(rawSubmissions);
 
   const submissions = new Array<IncompleteArtifactSubmission>();
 

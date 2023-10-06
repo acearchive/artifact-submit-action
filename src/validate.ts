@@ -36,7 +36,9 @@ type CompleteFileDetailsMap = Map<URL, CompleteFileDetails>;
 const completeFileDetails = async (
   submissions: ReadonlyArray<IncompleteArtifactSubmission>
 ): Promise<CompleteFileDetailsMap> => {
-  core.debug(`Completing file details of ${submissions.length} submissions.`);
+  core.info(
+    `Computing missing submission details of ${submissions.length} submissions`
+  );
 
   const incompleteDetailsMap: IncompleteFileDetailsMap = new Map(
     submissions.flatMap(({ files }) =>
@@ -52,7 +54,9 @@ const completeFileDetails = async (
     )
   );
 
-  core.debug(`Completing file details of ${incompleteDetailsMap.size} files.`);
+  core.startGroup(
+    `Computing missing submission details of ${incompleteDetailsMap.size} files`
+  );
 
   const completeDetailsMap: CompleteFileDetailsMap = new Map();
 
@@ -63,7 +67,7 @@ const completeFileDetails = async (
     )
       continue;
 
-    core.debug(
+    core.info(
       `File with this URL is missing media type or multihash: ${sourceUrl}`
     );
 
@@ -104,6 +108,8 @@ const completeFileDetails = async (
       core.info(`HEAD request successful: ${sourceUrl}`);
     }
   }
+
+  core.endGroup();
 
   return completeDetailsMap;
 };

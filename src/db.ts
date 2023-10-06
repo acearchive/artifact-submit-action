@@ -16,7 +16,7 @@ export const uploadMetadata = async ({
   authSecret: string;
   workerDomain: string;
 }) => {
-  core.startGroup("Uploading metadata for artifacts...");
+  core.startGroup("Uploading metadata for artifacts");
 
   for (const artifact of artifacts) {
     core.info(`Uploading metadata for artifact: ${artifact.slug}`);
