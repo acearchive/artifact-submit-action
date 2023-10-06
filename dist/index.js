@@ -502,7 +502,9 @@ const schema = joi_1.default.object({
     s3Region: joi_1.default.string().required().label("s3_region"),
     s3AccessKeyId: joi_1.default.string().required().label("s3_access_key_id"),
     s3SecretAccessKey: joi_1.default.string().required().label("s3_secret_access_key"),
-    submissionWorkerDomain: joi_1.default.string().uri().label("submission_worker_domain"),
+    submissionWorkerDomain: joi_1.default.string()
+        .required()
+        .label("submission_worker_domain"),
     submissionWorkerSecret: joi_1.default.string()
         .required()
         .label("submission_worker_secret"),
