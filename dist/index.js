@@ -1,6 +1,77 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 2279:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.uploadMetadata = void 0;
+const core = __importStar(__nccwpck_require__(42186));
+const node_fetch_1 = __importDefault(__nccwpck_require__(44429));
+const authUser = "artifact-submit-action";
+// This uploads the artifact metadata to the database via a Cloudflare Worker
+// named submission-worker.
+const uploadMetadata = ({ artifacts, authSecret, workerDomain, }) => __awaiter(void 0, void 0, void 0, function* () {
+    core.startGroup("Uploading metadata for artifacts...");
+    for (const artifact of artifacts) {
+        core.info(`Uploading metadata for artifact: ${artifact.slug}`);
+        const authCredential = `${authUser}:${authSecret}`;
+        const resp = yield (0, node_fetch_1.default)(`https://${workerDomain}/submit`, {
+            method: "POST",
+            body: JSON.stringify(artifact),
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Basic ${Buffer.from(authCredential).toString("base64")}`,
+            },
+        });
+        if (!resp.ok) {
+            throw new Error(`Failed uploading metadata for artifact: ${artifact.slug}\nReturned ${resp.status} ${resp.statusText}`);
+        }
+    }
+    core.endGroup();
+});
+exports.uploadMetadata = uploadMetadata;
+
+
+/***/ }),
+
 /***/ 95933:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -281,6 +352,7 @@ const hash_1 = __nccwpck_require__(41859);
 const s3_1 = __nccwpck_require__(81863);
 const submission_1 = __nccwpck_require__(16307);
 const validate_1 = __nccwpck_require__(81997);
+const db_1 = __nccwpck_require__(2279);
 const validate = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
     core.info("Computing missing submission fields...");
     const completedSubmissions = yield (0, validate_1.completeArtifactSubmissions)(submissions);
@@ -330,16 +402,12 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
         }
         artifactMetadataList.push((0, submission_1.toApi)(submission, params));
     }
-    core.info(`Writing artifact metadata...`);
-    // TODO: Upload artifacts to submission-worker here!
-    //
-    // await putArtifacts({
-    //   accountId: params.cloudflareAccountId,
-    //   secretToken: params.cloudflareApiToken,
-    //   namespace: params.kvNamespaceId,
-    //   artifacts: artifactMetadataList,
-    // });
-    core.info(`Finished writing artifact metadata.`);
+    // Upload metadata to the database.
+    yield (0, db_1.uploadMetadata)({
+        artifacts: artifactMetadataList,
+        authSecret: params.submissionWorkerSecret,
+        workerDomain: params.submissionWorkerDomain,
+    });
     core.setOutput("artifacts", artifactMetadataList);
     core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts.`);
     core.info(`Uploaded ${filesUploaded} files to S3.`);
@@ -434,15 +502,23 @@ const schema = joi_1.default.object({
     s3Region: joi_1.default.string().required().label("s3_region"),
     s3AccessKeyId: joi_1.default.string().required().label("s3_access_key_id"),
     s3SecretAccessKey: joi_1.default.string().required().label("s3_secret_access_key"),
+    submissionWorkerDomain: joi_1.default.string().uri().label("submission_worker_domain"),
+    submissionWorkerSecret: joi_1.default.string()
+        .required()
+        .label("submission_worker_secret"),
 });
 const getParams = () => {
     const s3AccessKeyId = core.getInput("s3_access_key_id", { required: true });
     const s3SecretAccessKey = core.getInput("s3_secret_access_key", {
         required: true,
     });
+    const submissionWorkerSecret = core.getInput("submission_worker_secret", {
+        required: true,
+    });
     // The S3 access key ID isn't strictly a secret, but we're redacting it anyways.
     core.setSecret(s3AccessKeyId);
     core.setSecret(s3SecretAccessKey);
+    core.setSecret(submissionWorkerSecret);
     return joi_1.default.attempt({
         mode: core.getInput("mode", { required: true }),
         repo: process.env.GITHUB_WORKSPACE,
@@ -453,8 +529,12 @@ const getParams = () => {
         s3Bucket: core.getInput("s3_bucket", { required: true }),
         s3Prefix: core.getInput("s3_prefix", { required: true }),
         s3Region: core.getInput("s3_region", { required: true }),
+        submissionWorkerDomain: core.getInput("submission_worker_domain", {
+            required: true,
+        }),
         s3AccessKeyId,
         s3SecretAccessKey,
+        submissionWorkerSecret,
     }, schema, { abortEarly: false });
 };
 exports.getParams = getParams;
