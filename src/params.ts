@@ -33,7 +33,9 @@ const schema = Joi.object({
   s3Region: Joi.string().required().label("s3_region"),
   s3AccessKeyId: Joi.string().required().label("s3_access_key_id"),
   s3SecretAccessKey: Joi.string().required().label("s3_secret_access_key"),
-  submissionWorkerDomain: Joi.string().uri().label("submission_worker_domain"),
+  submissionWorkerDomain: Joi.string()
+    .required()
+    .label("submission_worker_domain"),
   submissionWorkerSecret: Joi.string()
     .required()
     .label("submission_worker_secret"),
