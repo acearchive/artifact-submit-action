@@ -600,9 +600,7 @@ const listModifiedSubmissionFiles = ({ repoPath, submissionPath, baseRef, }) => 
         repoPath,
         "diff",
         "--name-only",
-        // To see why we need the `origin/` part:
-        // https://github.com/actions/checkout/issues/118
-        `origin/${baseRef}`,
+        baseRef,
         "HEAD",
         "--",
         submissionPath,
