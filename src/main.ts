@@ -131,8 +131,6 @@ const upload = async ({
     workerDomain: params.submissionWorkerDomain,
   });
 
-  core.setOutput("artifacts", artifactMetadataList);
-
   core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts`);
 };
 
