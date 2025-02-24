@@ -410,7 +410,6 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
         authSecret: params.submissionWorkerSecret,
         workerDomain: params.submissionWorkerDomain,
     });
-    core.setOutput("artifacts", artifactMetadataList);
     core.info(`Wrote metadata for ${artifactMetadataList.length} artifacts`);
 });
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
