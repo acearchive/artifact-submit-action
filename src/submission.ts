@@ -105,7 +105,6 @@ export const toApi = (
         multihash: fileInput.multihash,
       }),
       url: new URL(
-        // We need URL paths use forward slashes, even on Windows.
         path.posix.join("artifacts", input.slug, fileInput.filename),
         params.baseUrl
       ).toString(),

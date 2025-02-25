@@ -3,7 +3,7 @@ import stream from "stream";
 import { Params } from "./params";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { MultihashDigest } from "multiformats/hashes/interface";
-import { encodeMultihash } from "./hash";
+import { encodeMultihash, reprDigest, reprDigestAlgorithmName } from "./hash";
 
 export const newClient = (params: Params): S3Client => {
   return new S3Client({
@@ -88,14 +88,23 @@ export const putArtifactFile = async ({
 
 export const checkArtifactExists = async ({
   multihash,
+  slug,
+  filename,
   baseUrl,
 }: {
   multihash: MultihashDigest;
+  slug: string;
+  filename: string;
   baseUrl: URL;
 }): Promise<boolean> => {
-  const artifactUrl = new URL(`${baseUrl}/${encodeMultihash(multihash)}`);
+  const artifactUrl = new URL(`${baseUrl}/${slug}/${filename}`);
 
-  const response = await fetch(artifactUrl.href, { method: "HEAD" });
+  const response = await fetch(artifactUrl.href, {
+    method: "HEAD",
+    headers: {
+      "Want-Repr-Digest": `${reprDigestAlgorithmName(multihash.code)}=9`,
+    },
+  });
 
   if (response.ok) {
     return true;
@@ -105,7 +114,17 @@ export const checkArtifactExists = async ({
     return false;
   }
 
-  throw new Error(
-    `Unexpected status code ${response.status} while checking if artifact exists at: ${artifactUrl.href}`
-  );
+  const actualReprDigest = response.headers.get("Repr-Digest");
+
+  if (!actualReprDigest) {
+    throw new Error(
+      `No Repr-Digest header returned while checking if artifact exists at: ${artifactUrl.href}`
+    );
+  }
+
+  if (actualReprDigest === reprDigest(multihash)) {
+    return true;
+  }
+
+  return false;
 };

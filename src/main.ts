@@ -61,7 +61,14 @@ const upload = async ({
       const multihash = decodeMultihash(fileSubmission.multihash);
 
       // We can skip files that have already been uploaded to R2.
-      if (await checkArtifactExists({ multihash, baseUrl: params.baseUrl })) {
+      if (
+        await checkArtifactExists({
+          baseUrl: params.baseUrl,
+          slug: submission.slug,
+          filename: fileSubmission.filename,
+          multihash: multihash,
+        })
+      ) {
         core.info(
           `Skipping artifact file: ${submission.slug}/${fileSubmission.filename}`
         );

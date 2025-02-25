@@ -66,6 +66,22 @@ export const isSupportedDigest = (
 export const algorithmName = (code: number): string =>
   algorithmByCode(code).name;
 
+// As used in the `Repr-Digest` header.
+export const reprDigestAlgorithmName = (code: number): string => {
+  switch (code) {
+    case multihashCodes.sha2_256:
+      return "sha-256";
+    default:
+      throw invalidCodeError(code);
+  }
+};
+
+// The value of the `Repr-Digest` header.
+export const reprDigest = (multihash: MultihashDigest): string =>
+  `${reprDigestAlgorithmName(multihash.code)}=:${Buffer.from(
+    multihash.digest
+  ).toString("base64")}:`;
+
 export const decodeMultihash = (hex: string): MultihashDigest =>
   multihash.decode(Buffer.from(hex, "hex"));
 
