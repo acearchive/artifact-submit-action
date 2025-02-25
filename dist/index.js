@@ -731,20 +731,17 @@ const checkArtifactExists = ({ multihash, slug, filename, baseUrl, }) => __await
             "Want-Repr-Digest": `${(0, hash_1.reprDigestAlgorithmName)(multihash.code)}=9`,
         },
     });
-    if (response.ok) {
-        return true;
-    }
     if (response.status === 404) {
         return false;
+    }
+    if (!response.ok) {
+        throw new Error(`Got status ${response.status} while checking if artifact exists at: ${artifactUrl.href}`);
     }
     const actualReprDigest = response.headers.get("Repr-Digest");
     if (!actualReprDigest) {
         throw new Error(`No Repr-Digest header returned while checking if artifact exists at: ${artifactUrl.href}`);
     }
-    if (actualReprDigest === (0, hash_1.reprDigest)(multihash)) {
-        return true;
-    }
-    return false;
+    return actualReprDigest === (0, hash_1.reprDigest)(multihash);
 });
 exports.checkArtifactExists = checkArtifactExists;
 
