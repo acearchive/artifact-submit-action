@@ -360,12 +360,6 @@ const validate = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0,
 const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
     core.info("Starting the upload process");
     const s3Client = (0, s3_1.newClient)(params);
-    const existingMultihashes = yield (0, s3_1.listMultihashes)({
-        client: s3Client,
-        bucket: params.s3Bucket,
-        prefix: params.s3Prefix,
-    });
-    core.info(`Found ${existingMultihashes.size} artifact files in the R2 bucket`);
     let filesUploaded = 0;
     const artifactMetadataList = [];
     core.startGroup("Fetching files and uploading to R2");
@@ -376,7 +370,7 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
         for (const fileSubmission of submission.files) {
             const multihash = (0, hash_1.decodeMultihash)(fileSubmission.multihash);
             // We can skip files that have already been uploaded to R2.
-            if (existingMultihashes.has(fileSubmission.multihash)) {
+            if (yield (0, s3_1.checkArtifactExists)({ multihash, baseUrl: params.baseUrl })) {
                 core.info(`Skipping artifact file: ${submission.slug}/${fileSubmission.filename}`);
                 continue;
             }
@@ -665,18 +659,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __asyncValues = (this && this.__asyncValues) || function (o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator], i;
-    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.listMultihashes = exports.putArtifactFile = exports.multihashFromKey = exports.keyFromMultihash = exports.newClient = void 0;
+exports.checkArtifactExists = exports.putArtifactFile = exports.multihashFromKey = exports.keyFromMultihash = exports.newClient = void 0;
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const client_s3_1 = __nccwpck_require__(9250);
 const hash_1 = __nccwpck_require__(1859);
@@ -701,35 +688,6 @@ const putObject = ({ client, bucket, body, key, mediaType, contentLength, }) => 
         ContentLength: contentLength,
     }));
 });
-const pageSize = 200;
-const listObjectKeys = ({ client, bucket, prefix, }) => __awaiter(void 0, void 0, void 0, function* () {
-    var e_1, _a;
-    const paginator = (0, client_s3_1.paginateListObjectsV2)({ client, pageSize: pageSize }, {
-        Bucket: bucket,
-        Prefix: prefix,
-    });
-    const keys = new Set();
-    try {
-        for (var paginator_1 = __asyncValues(paginator), paginator_1_1; paginator_1_1 = yield paginator_1.next(), !paginator_1_1.done;) {
-            const page = paginator_1_1.value;
-            if (page.Contents === undefined)
-                continue;
-            for (const obj of page.Contents) {
-                if (obj.Key === undefined)
-                    continue;
-                keys.add(obj.Key);
-            }
-        }
-    }
-    catch (e_1_1) { e_1 = { error: e_1_1 }; }
-    finally {
-        try {
-            if (paginator_1_1 && !paginator_1_1.done && (_a = paginator_1.return)) yield _a.call(paginator_1);
-        }
-        finally { if (e_1) throw e_1.error; }
-    }
-    return keys;
-});
 const keyFromMultihash = ({ multihash, prefix, }) => prefix + multihash;
 exports.keyFromMultihash = keyFromMultihash;
 const multihashFromKey = ({ key, prefix, }) => key.substring(prefix.length);
@@ -747,15 +705,18 @@ const putArtifactFile = ({ client, bucket, filePath, multihash, prefix, mediaTyp
     });
 });
 exports.putArtifactFile = putArtifactFile;
-const listMultihashes = ({ client, bucket, prefix, }) => __awaiter(void 0, void 0, void 0, function* () {
-    const multihashes = new Set();
-    const keys = yield listObjectKeys({ client, bucket, prefix });
-    for (const key of keys) {
-        multihashes.add((0, exports.multihashFromKey)({ key, prefix }));
+const checkArtifactExists = ({ multihash, baseUrl, }) => __awaiter(void 0, void 0, void 0, function* () {
+    const artifactUrl = new URL(`${baseUrl}/${(0, hash_1.encodeMultihash)(multihash)}`);
+    const response = yield fetch(artifactUrl.href, { method: "HEAD" });
+    if (response.ok) {
+        return true;
     }
-    return multihashes;
+    if (response.status === 404) {
+        return false;
+    }
+    throw new Error(`Unexpected status code ${response.status} while checking if artifact exists at: ${artifactUrl.href}`);
 });
-exports.listMultihashes = listMultihashes;
+exports.checkArtifactExists = checkArtifactExists;
 
 
 /***/ }),
