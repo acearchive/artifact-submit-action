@@ -106,12 +106,14 @@ export const checkArtifactExists = async ({
     },
   });
 
-  if (response.ok) {
-    return true;
-  }
-
   if (response.status === 404) {
     return false;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Got status ${response.status} while checking if artifact exists at: ${artifactUrl.href}`
+    );
   }
 
   const actualReprDigest = response.headers.get("Repr-Digest");
@@ -122,9 +124,5 @@ export const checkArtifactExists = async ({
     );
   }
 
-  if (actualReprDigest === reprDigest(multihash)) {
-    return true;
-  }
-
-  return false;
+  return actualReprDigest === reprDigest(multihash);
 };
