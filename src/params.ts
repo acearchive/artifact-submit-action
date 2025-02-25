@@ -1,5 +1,3 @@
-import { URL } from "url";
-
 import Joi from "joi";
 import * as core from "@actions/core";
 

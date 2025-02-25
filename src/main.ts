@@ -8,7 +8,7 @@ import { getSubmissions } from "./repo";
 import { schema } from "./schema";
 import { downloadAndVerify } from "./download";
 import { debugPrintDigest, decodeMultihash } from "./hash";
-import { listMultihashes, newClient, putArtifactFile } from "./s3";
+import { checkArtifactExists, newClient, putArtifactFile } from "./s3";
 import {
   IncompleteArtifactSubmission,
   isSubmissionValidated,
@@ -43,15 +43,6 @@ const upload = async ({
   core.info("Starting the upload process");
 
   const s3Client = newClient(params);
-  const existingMultihashes = await listMultihashes({
-    client: s3Client,
-    bucket: params.s3Bucket,
-    prefix: params.s3Prefix,
-  });
-
-  core.info(
-    `Found ${existingMultihashes.size} artifact files in the R2 bucket`
-  );
 
   let filesUploaded = 0;
 
@@ -70,10 +61,11 @@ const upload = async ({
       const multihash = decodeMultihash(fileSubmission.multihash);
 
       // We can skip files that have already been uploaded to R2.
-      if (existingMultihashes.has(fileSubmission.multihash)) {
+      if (await checkArtifactExists({ multihash, baseUrl: params.baseUrl })) {
         core.info(
           `Skipping artifact file: ${submission.slug}/${fileSubmission.filename}`
         );
+
         continue;
       }
 

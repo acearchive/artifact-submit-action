@@ -1,11 +1,7 @@
 import fs from "fs";
 import stream from "stream";
 import { Params } from "./params";
-import {
-  S3Client,
-  PutObjectCommand,
-  paginateListObjectsV2,
-} from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { MultihashDigest } from "multiformats/hashes/interface";
 import { encodeMultihash } from "./hash";
 
@@ -45,39 +41,6 @@ const putObject = async ({
       ContentLength: contentLength,
     })
   );
-};
-
-const pageSize = 200;
-
-const listObjectKeys = async ({
-  client,
-  bucket,
-  prefix,
-}: {
-  client: S3Client;
-  bucket: string;
-  prefix: string;
-}): Promise<Set<string>> => {
-  const paginator = paginateListObjectsV2(
-    { client, pageSize: pageSize },
-    {
-      Bucket: bucket,
-      Prefix: prefix,
-    }
-  );
-
-  const keys = new Set<string>();
-
-  for await (const page of paginator) {
-    if (page.Contents === undefined) continue;
-
-    for (const obj of page.Contents) {
-      if (obj.Key === undefined) continue;
-      keys.add(obj.Key);
-    }
-  }
-
-  return keys;
 };
 
 export const keyFromMultihash = ({
@@ -123,21 +86,26 @@ export const putArtifactFile = async ({
   });
 };
 
-export const listMultihashes = async ({
-  client,
-  bucket,
-  prefix,
+export const checkArtifactExists = async ({
+  multihash,
+  baseUrl,
 }: {
-  client: S3Client;
-  bucket: string;
-  prefix: string;
-}): Promise<Set<string>> => {
-  const multihashes = new Set<string>();
+  multihash: MultihashDigest;
+  baseUrl: URL;
+}): Promise<boolean> => {
+  const artifactUrl = new URL(`${baseUrl}/${encodeMultihash(multihash)}`);
 
-  const keys = await listObjectKeys({ client, bucket, prefix });
-  for (const key of keys) {
-    multihashes.add(multihashFromKey({ key, prefix }));
+  const response = await fetch(artifactUrl.href, { method: "HEAD" });
+
+  if (response.ok) {
+    return true;
   }
 
-  return multihashes;
+  if (response.status === 404) {
+    return false;
+  }
+
+  throw new Error(
+    `Unexpected status code ${response.status} while checking if artifact exists at: ${artifactUrl.href}`
+  );
 };
