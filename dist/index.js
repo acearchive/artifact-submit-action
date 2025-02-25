@@ -215,7 +215,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.defaultAlgorithm = exports.debugPrintDigest = exports.encodedHashFromMultihash = exports.encodeMultihash = exports.decodeMultihash = exports.algorithmName = exports.isSupportedDigest = exports.isSupportedAlgorithm = exports.algorithmByCode = exports.hashFile = void 0;
+exports.defaultAlgorithm = exports.debugPrintDigest = exports.encodedHashFromMultihash = exports.encodeMultihash = exports.decodeMultihash = exports.reprDigest = exports.reprDigestAlgorithmName = exports.algorithmName = exports.isSupportedDigest = exports.isSupportedAlgorithm = exports.algorithmByCode = exports.hashFile = void 0;
 const hasha_1 = __importDefault(__nccwpck_require__(4933));
 const multihash = __importStar(__nccwpck_require__(76));
 const hashFile = (file, algorithm) => __awaiter(void 0, void 0, void 0, function* () {
@@ -244,6 +244,19 @@ const isSupportedDigest = (digest) => isSupportedCode(digest.code);
 exports.isSupportedDigest = isSupportedDigest;
 const algorithmName = (code) => (0, exports.algorithmByCode)(code).name;
 exports.algorithmName = algorithmName;
+// As used in the `Repr-Digest` header.
+const reprDigestAlgorithmName = (code) => {
+    switch (code) {
+        case multihashCodes.sha2_256:
+            return "sha-256";
+        default:
+            throw invalidCodeError(code);
+    }
+};
+exports.reprDigestAlgorithmName = reprDigestAlgorithmName;
+// The value of the `Repr-Digest` header.
+const reprDigest = (multihash) => `${(0, exports.reprDigestAlgorithmName)(multihash.code)}=:${Buffer.from(multihash.digest).toString("base64")}:`;
+exports.reprDigest = reprDigest;
 const decodeMultihash = (hex) => multihash.decode(Buffer.from(hex, "hex"));
 exports.decodeMultihash = decodeMultihash;
 const encodeMultihash = (multihash) => Buffer.from(multihash.bytes).toString("hex");
@@ -370,7 +383,12 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
         for (const fileSubmission of submission.files) {
             const multihash = (0, hash_1.decodeMultihash)(fileSubmission.multihash);
             // We can skip files that have already been uploaded to R2.
-            if (yield (0, s3_1.checkArtifactExists)({ multihash, baseUrl: params.baseUrl })) {
+            if (yield (0, s3_1.checkArtifactExists)({
+                baseUrl: params.baseUrl,
+                slug: submission.slug,
+                filename: fileSubmission.filename,
+                multihash: multihash,
+            })) {
                 core.info(`Skipping artifact file: ${submission.slug}/${fileSubmission.filename}`);
                 continue;
             }
@@ -705,16 +723,28 @@ const putArtifactFile = ({ client, bucket, filePath, multihash, prefix, mediaTyp
     });
 });
 exports.putArtifactFile = putArtifactFile;
-const checkArtifactExists = ({ multihash, baseUrl, }) => __awaiter(void 0, void 0, void 0, function* () {
-    const artifactUrl = new URL(`${baseUrl}/${(0, hash_1.encodeMultihash)(multihash)}`);
-    const response = yield fetch(artifactUrl.href, { method: "HEAD" });
+const checkArtifactExists = ({ multihash, slug, filename, baseUrl, }) => __awaiter(void 0, void 0, void 0, function* () {
+    const artifactUrl = new URL(`${baseUrl}/${slug}/${filename}`);
+    const response = yield fetch(artifactUrl.href, {
+        method: "HEAD",
+        headers: {
+            "Want-Repr-Digest": `${(0, hash_1.reprDigestAlgorithmName)(multihash.code)}=9`,
+        },
+    });
     if (response.ok) {
         return true;
     }
     if (response.status === 404) {
         return false;
     }
-    throw new Error(`Unexpected status code ${response.status} while checking if artifact exists at: ${artifactUrl.href}`);
+    const actualReprDigest = response.headers.get("Repr-Digest");
+    if (!actualReprDigest) {
+        throw new Error(`No Repr-Digest header returned while checking if artifact exists at: ${artifactUrl.href}`);
+    }
+    if (actualReprDigest === (0, hash_1.reprDigest)(multihash)) {
+        return true;
+    }
+    return false;
 });
 exports.checkArtifactExists = checkArtifactExists;
 
@@ -863,9 +893,7 @@ const toApi = (input, params) => ({
                 prefix: params.s3Prefix,
                 multihash: fileInput.multihash,
             }),
-            url: new URL(
-            // We need URL paths use forward slashes, even on Windows.
-            path_1.default.posix.join("artifacts", input.slug, fileInput.filename), params.baseUrl).toString(),
+            url: new URL(path_1.default.posix.join("artifacts", input.slug, fileInput.filename), params.baseUrl).toString(),
             lang: fileInput.lang,
             hidden: fileInput.hidden,
             aliases: fileInput.aliases,
