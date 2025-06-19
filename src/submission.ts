@@ -62,6 +62,7 @@ export type IncompleteArtifactSubmission = Readonly<{
   from_year: number;
   to_year?: number;
   decades: ReadonlyArray<number>;
+  collections: ReadonlyArray<string>;
   aliases: ReadonlyArray<string>;
 }>;
 
@@ -122,5 +123,6 @@ export const toApi = (
   from_year: input.from_year,
   to_year: input.to_year,
   decades: input.decades,
+  collections: input.collections,
   aliases: input.aliases,
 });

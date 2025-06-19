@@ -35,5 +35,6 @@ export type Artifact = Readonly<{
   from_year: number;
   to_year?: number;
   decades: ReadonlyArray<number>;
+  collections: ReadonlyArray<string>;
   aliases: ReadonlyArray<string>;
 }>;
