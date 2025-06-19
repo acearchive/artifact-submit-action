@@ -23,6 +23,10 @@ inputs:
     description: >
       The base URL that artifact files will be hosted from.
     required: true
+  secondary_base_url:
+    description: >
+      The "secondary" base URL. Artifacts that already exist here will not be
+      uploaded to S3.
   base_ref:
     description: >
       The ref of the base branch, used to determine which files have changed in
