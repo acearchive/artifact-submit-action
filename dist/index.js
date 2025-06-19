@@ -842,6 +842,7 @@ exports.schema = joi_1.default.object({
         .min(joi_1.default.ref("...from_year", { adjust: decadeFromYear }))
         .max(joi_1.default.ref("...to_year", { adjust: decadeFromYear })))
         .default([]),
+    collections: joi_1.default.array().unique().items(joi_1.default.string().empty("")).default([]),
     aliases: joi_1.default.array()
         .unique()
         .items(joi_1.default.string().pattern(urlSlugPattern).min(12).max(64).empty(""))
@@ -905,6 +906,7 @@ const toApi = (input, params) => ({
     from_year: input.from_year,
     to_year: input.to_year,
     decades: input.decades,
+    collections: input.collections,
     aliases: input.aliases,
 });
 exports.toApi = toApi;

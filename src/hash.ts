@@ -96,7 +96,8 @@ export const debugPrintDigest = (digest: MultihashDigest): string =>
 
 // A `MultihashAlgorithm` implemented using Node's `crypto` module.
 class HashaMultihashAlgorithm<Code extends number>
-  implements MultihashAlgorithm<Code> {
+  implements MultihashAlgorithm<Code>
+{
   readonly name: string;
   readonly code: Code;
   private readonly opensslAlgorithm: string;
