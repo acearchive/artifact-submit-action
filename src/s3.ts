@@ -97,7 +97,7 @@ export const checkArtifactExists = async ({
   filename: string;
   baseUrl: URL;
 }): Promise<boolean> => {
-  const artifactUrl = new URL(`${baseUrl}/${slug}/${filename}`);
+  const artifactUrl = new URL(`${baseUrl}/raw/${slug}/${filename}`);
 
   const response = await fetch(artifactUrl.href, {
     method: "HEAD",
