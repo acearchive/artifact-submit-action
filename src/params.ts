@@ -26,6 +26,7 @@ const schema = Joi.object({
   path: Joi.string().uri({ relativeOnly: true }).required().label("path"),
   baseUrl: Joi.string().uri({ scheme: "https" }).required().label("base_url"),
   secondaryBaseUrl: Joi.string()
+    .empty("")
     .uri({ scheme: "https" })
     .label("secondary_base_url"),
   baseRef: Joi.string().required().label("base_ref"),
