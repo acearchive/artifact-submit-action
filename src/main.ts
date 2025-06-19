@@ -76,6 +76,24 @@ const upload = async ({
         continue;
       }
 
+      // Also check the secondary base URL, if provided.
+      if (params.secondaryBaseUrl !== undefined) {
+        if (
+          await checkArtifactExists({
+            baseUrl: params.secondaryBaseUrl,
+            slug: submission.slug,
+            filename: fileSubmission.filename,
+            multihash: multihash,
+          })
+        ) {
+          core.info(
+            `Skipping artifact file: ${submission.slug}/${fileSubmission.filename}`
+          );
+
+          continue;
+        }
+      }
+
       const downloadResult = await downloadAndVerify(
         fileSubmission.source_url,
         multihash
@@ -105,10 +123,8 @@ const upload = async ({
         filesUploaded += 1;
       } else {
         throw new Error(
-          `Downloaded file does not match the hash included in the submission: ${
-            submission.slug
-          }/${fileSubmission.filename}\nURL: ${
-            fileSubmission.source_url
+          `Downloaded file does not match the hash included in the submission: ${submission.slug
+          }/${fileSubmission.filename}\nURL: ${fileSubmission.source_url
           }\nExpected: ${debugPrintDigest(
             multihash
           )}\nActual: ${debugPrintDigest(downloadResult.actualDigest)}`
