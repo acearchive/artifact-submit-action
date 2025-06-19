@@ -741,7 +741,7 @@ const putArtifactFile = ({ client, bucket, filePath, multihash, prefix, mediaTyp
 });
 exports.putArtifactFile = putArtifactFile;
 const checkArtifactExists = ({ multihash, slug, filename, baseUrl, }) => __awaiter(void 0, void 0, void 0, function* () {
-    const artifactUrl = new URL(`${baseUrl}/${slug}/${filename}`);
+    const artifactUrl = new URL(`${baseUrl}/raw/${slug}/${filename}`);
     const response = yield fetch(artifactUrl.href, {
         method: "HEAD",
         headers: {
