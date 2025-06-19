@@ -123,8 +123,10 @@ const upload = async ({
         filesUploaded += 1;
       } else {
         throw new Error(
-          `Downloaded file does not match the hash included in the submission: ${submission.slug
-          }/${fileSubmission.filename}\nURL: ${fileSubmission.source_url
+          `Downloaded file does not match the hash included in the submission: ${
+            submission.slug
+          }/${fileSubmission.filename}\nURL: ${
+            fileSubmission.source_url
           }\nExpected: ${debugPrintDigest(
             multihash
           )}\nActual: ${debugPrintDigest(downloadResult.actualDigest)}`

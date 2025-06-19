@@ -392,6 +392,18 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
                 core.info(`Skipping artifact file: ${submission.slug}/${fileSubmission.filename}`);
                 continue;
             }
+            // Also check the secondary base URL, if provided.
+            if (params.secondaryBaseUrl !== undefined) {
+                if (yield (0, s3_1.checkArtifactExists)({
+                    baseUrl: params.secondaryBaseUrl,
+                    slug: submission.slug,
+                    filename: fileSubmission.filename,
+                    multihash: multihash,
+                })) {
+                    core.info(`Skipping artifact file: ${submission.slug}/${fileSubmission.filename}`);
+                    continue;
+                }
+            }
             const downloadResult = yield (0, download_1.downloadAndVerify)(fileSubmission.source_url, multihash);
             core.info(`Downloaded file: ${fileSubmission.source_url}`);
             if (downloadResult.isValid) {
@@ -506,6 +518,9 @@ const schema = joi_1.default.object({
     repo: joi_1.default.string().required().label("GITHUB_WORKSPACE"),
     path: joi_1.default.string().uri({ relativeOnly: true }).required().label("path"),
     baseUrl: joi_1.default.string().uri({ scheme: "https" }).required().label("base_url"),
+    secondaryBaseUrl: joi_1.default.string()
+        .uri({ scheme: "https" })
+        .label("secondary_base_url"),
     baseRef: joi_1.default.string().required().label("base_ref"),
     s3Endpoint: joi_1.default.string().uri().label("s3_endpoint"),
     s3Bucket: joi_1.default.string().required().label("s3_bucket"),
@@ -537,6 +552,7 @@ const getParams = () => {
         repo: process.env.GITHUB_WORKSPACE,
         path: core.getInput("path", { required: true }),
         baseUrl: core.getInput("base_url", { required: true }),
+        secondaryBaseUrl: core.getInput("secondary_base_url"),
         baseRef: core.getInput("base_ref", { required: true }),
         s3Endpoint: core.getInput("s3_endpoint"),
         s3Bucket: core.getInput("s3_bucket", { required: true }),
