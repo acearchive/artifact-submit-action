@@ -42,13 +42,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.uploadMetadata = void 0;
+exports.uploadGlobalMetadata = exports.uploadArtifactMetadata = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const node_fetch_1 = __importDefault(__nccwpck_require__(4429));
 const authUser = "artifact-submit-action";
 // This uploads the artifact metadata to the database via a Cloudflare Worker
 // named submission-worker.
-const uploadMetadata = ({ artifacts, authSecret, workerDomain, }) => __awaiter(void 0, void 0, void 0, function* () {
+const uploadArtifactMetadata = ({ artifacts, authSecret, workerDomain, }) => __awaiter(void 0, void 0, void 0, function* () {
     core.startGroup("Uploading metadata for artifacts");
     for (const artifact of artifacts) {
         core.info(`Uploading metadata for artifact: ${artifact.slug}`);
@@ -67,7 +67,23 @@ const uploadMetadata = ({ artifacts, authSecret, workerDomain, }) => __awaiter(v
     }
     core.endGroup();
 });
-exports.uploadMetadata = uploadMetadata;
+exports.uploadArtifactMetadata = uploadArtifactMetadata;
+const uploadGlobalMetadata = ({ metadata, authSecret, workerDomain, }) => __awaiter(void 0, void 0, void 0, function* () {
+    core.info("Uploading global metadata");
+    const authCredential = `${authUser}:${authSecret}`;
+    const resp = yield (0, node_fetch_1.default)(`https://${workerDomain}/metadata`, {
+        method: "PUT",
+        body: JSON.stringify(metadata),
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Basic ${Buffer.from(authCredential).toString("base64")}`,
+        },
+    });
+    if (!resp.ok) {
+        throw new Error(`Failed uploading global metadata\nReturned ${resp.status} ${resp.statusText}`);
+    }
+});
+exports.uploadGlobalMetadata = uploadGlobalMetadata;
 
 
 /***/ }),
@@ -370,7 +386,7 @@ const validate = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0,
     const completedSubmissions = yield (0, validate_1.completeArtifactSubmissions)(submissions);
     yield (0, validate_1.writeArtifactSubmissions)(completedSubmissions, params);
 });
-const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, function* () {
+const upload = ({ params, submissions, metadata, }) => __awaiter(void 0, void 0, void 0, function* () {
     core.info("Starting the upload process");
     const s3Client = (0, s3_1.newClient)(params);
     let filesUploaded = 0;
@@ -429,8 +445,14 @@ const upload = ({ params, submissions, }) => __awaiter(void 0, void 0, void 0, f
     core.endGroup();
     core.info(`Uploaded ${filesUploaded} files to R2`);
     // Upload metadata to the database.
-    yield (0, db_1.uploadMetadata)({
+    yield (0, db_1.uploadArtifactMetadata)({
         artifacts: artifactMetadataList,
+        authSecret: params.submissionWorkerSecret,
+        workerDomain: params.submissionWorkerDomain,
+    });
+    // Upload global metadata (tag descriptions, etc.).
+    yield (0, db_1.uploadGlobalMetadata)({
+        metadata: metadata,
         authSecret: params.submissionWorkerSecret,
         workerDomain: params.submissionWorkerDomain,
     });
@@ -442,6 +464,10 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         repoPath: params.repo,
         submissionPath: params.path,
         baseRef: params.baseRef,
+    });
+    const metadata = yield (0, repo_1.getMetadata)({
+        repoPath: params.repo,
+        metadataPath: params.metadataPath,
     });
     const setOfAllSlugs = (0, validate_1.allSlugsInSubmissions)(rawSubmissions);
     const submissions = new Array();
@@ -461,7 +487,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         case "validate":
             return yield validate({ params, submissions });
         case "upload":
-            return yield upload({ params, submissions });
+            return yield upload({ params, submissions, metadata });
     }
 });
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
@@ -517,6 +543,10 @@ const schema = joi_1.default.object({
     mode: joi_1.default.string().required().label("mode").valid("validate", "upload"),
     repo: joi_1.default.string().required().label("GITHUB_WORKSPACE"),
     path: joi_1.default.string().uri({ relativeOnly: true }).required().label("path"),
+    metadataPath: joi_1.default.string()
+        .uri({ relativeOnly: true })
+        .required()
+        .label("metadataPath"),
     baseUrl: joi_1.default.string().uri({ scheme: "https" }).required().label("base_url"),
     secondaryBaseUrl: joi_1.default.string()
         .empty("")
@@ -552,6 +582,7 @@ const getParams = () => {
         mode: core.getInput("mode", { required: true }),
         repo: process.env.GITHUB_WORKSPACE,
         path: core.getInput("path", { required: true }),
+        metadataPath: core.getInput("metadata_path", { required: true }),
         baseUrl: core.getInput("base_url", { required: true }),
         secondaryBaseUrl: core.getInput("secondary_base_url"),
         baseRef: core.getInput("base_ref", { required: true }),
@@ -613,7 +644,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getSubmissionPath = exports.getSubmissions = void 0;
+exports.getMetadataPath = exports.getSubmissionPath = exports.getMetadata = exports.getSubmissions = void 0;
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const child_process_1 = __nccwpck_require__(2081);
 const promises_1 = __importDefault(__nccwpck_require__(3292));
@@ -674,8 +705,21 @@ const getSubmissions = ({ repoPath, submissionPath, baseRef, }) => __awaiter(voi
     return submissions;
 });
 exports.getSubmissions = getSubmissions;
+const getMetadata = ({ repoPath, metadataPath, }) => __awaiter(void 0, void 0, void 0, function* () {
+    const metadataFile = (0, exports.getMetadataPath)({
+        repoPath,
+        metadataFile: metadataPath,
+    });
+    const metadataContent = yield promises_1.default.readFile(metadataFile, {
+        encoding: "utf-8",
+    });
+    return JSON.parse(metadataContent);
+});
+exports.getMetadata = getMetadata;
 const getSubmissionPath = ({ repoPath, submissionPath, artifactSlug, }) => path_1.default.join(repoPath, submissionPath, `${artifactSlug}.json`);
 exports.getSubmissionPath = getSubmissionPath;
+const getMetadataPath = ({ repoPath, metadataFile, }) => path_1.default.join(repoPath, metadataFile);
+exports.getMetadataPath = getMetadataPath;
 
 
 /***/ }),
