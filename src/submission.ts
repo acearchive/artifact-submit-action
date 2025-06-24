@@ -22,6 +22,10 @@ export type JsonObject = Readonly<Record<string, JsonValue>>;
 export const isJsonObject = (value: JsonValue): value is JsonObject =>
   typeof value === "object" && !Array.isArray(value) && value !== null;
 
+export const isJsonArray = (
+  value: JsonValue
+): value is ReadonlyArray<JsonValue> => Array.isArray(value) && value !== null;
+
 export const isString = (value: JsonValue): value is string =>
   typeof value === "string";
 

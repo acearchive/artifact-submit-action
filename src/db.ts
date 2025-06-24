@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import fetch from "node-fetch";
 
 import { Artifact } from "./api";
-import { Metadata } from "./submission";
+import { isJsonArray, Metadata } from "./submission";
 
 const authUser = "artifact-submit-action";
 
@@ -54,7 +54,13 @@ export const uploadGlobalMetadata = async ({
   authSecret: string;
   workerDomain: string;
 }) => {
-  core.info("Uploading global metadata");
+  core.startGroup("Updating global metadata");
+
+  if (isJsonArray(metadata.tags)) {
+    core.info(`${metadata.tags.length} tags found`);
+  }
+
+  core.endGroup();
 
   const authCredential = `${authUser}:${authSecret}`;
 
