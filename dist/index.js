@@ -45,6 +45,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.uploadGlobalMetadata = exports.uploadArtifactMetadata = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const node_fetch_1 = __importDefault(__nccwpck_require__(4429));
+const submission_1 = __nccwpck_require__(6307);
 const authUser = "artifact-submit-action";
 // This uploads the artifact metadata to the database via a Cloudflare Worker
 // named submission-worker.
@@ -69,7 +70,11 @@ const uploadArtifactMetadata = ({ artifacts, authSecret, workerDomain, }) => __a
 });
 exports.uploadArtifactMetadata = uploadArtifactMetadata;
 const uploadGlobalMetadata = ({ metadata, authSecret, workerDomain, }) => __awaiter(void 0, void 0, void 0, function* () {
-    core.info("Uploading global metadata");
+    core.startGroup("Updating global metadata");
+    if ((0, submission_1.isJsonArray)(metadata.tags)) {
+        core.info(`${metadata.tags.length} tags found`);
+    }
+    core.endGroup();
     const authCredential = `${authUser}:${authSecret}`;
     const resp = yield (0, node_fetch_1.default)(`https://${workerDomain}/metadata`, {
         method: "PUT",
@@ -922,12 +927,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.toApi = exports.isSubmissionValidated = exports.isString = exports.isJsonObject = void 0;
+exports.toApi = exports.isSubmissionValidated = exports.isString = exports.isJsonArray = exports.isJsonObject = void 0;
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const hash_1 = __nccwpck_require__(1859);
 const s3_1 = __nccwpck_require__(1863);
 const isJsonObject = (value) => typeof value === "object" && !Array.isArray(value) && value !== null;
 exports.isJsonObject = isJsonObject;
+const isJsonArray = (value) => Array.isArray(value) && value !== null;
+exports.isJsonArray = isJsonArray;
 const isString = (value) => typeof value === "string";
 exports.isString = isString;
 const isSubmissionValidated = (submission) => submission.id !== undefined &&
