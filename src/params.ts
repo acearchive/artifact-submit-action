@@ -7,6 +7,7 @@ export type Params = Readonly<{
   mode: Mode;
   repo: string;
   path: string;
+  metadataPath: string;
   baseUrl: URL;
   secondaryBaseUrl?: URL;
   baseRef: string;
@@ -24,6 +25,10 @@ const schema = Joi.object({
   mode: Joi.string().required().label("mode").valid("validate", "upload"),
   repo: Joi.string().required().label("GITHUB_WORKSPACE"),
   path: Joi.string().uri({ relativeOnly: true }).required().label("path"),
+  metadataPath: Joi.string()
+    .uri({ relativeOnly: true })
+    .required()
+    .label("metadataPath"),
   baseUrl: Joi.string().uri({ scheme: "https" }).required().label("base_url"),
   secondaryBaseUrl: Joi.string()
     .empty("")
@@ -63,6 +68,7 @@ export const getParams = (): Params => {
       mode: core.getInput("mode", { required: true }),
       repo: process.env.GITHUB_WORKSPACE,
       path: core.getInput("path", { required: true }),
+      metadataPath: core.getInput("metadata_path", { required: true }),
       baseUrl: core.getInput("base_url", { required: true }),
       secondaryBaseUrl: core.getInput("secondary_base_url"),
       baseRef: core.getInput("base_ref", { required: true }),

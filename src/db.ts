@@ -2,12 +2,13 @@ import * as core from "@actions/core";
 import fetch from "node-fetch";
 
 import { Artifact } from "./api";
+import { Metadata } from "./submission";
 
 const authUser = "artifact-submit-action";
 
 // This uploads the artifact metadata to the database via a Cloudflare Worker
 // named submission-worker.
-export const uploadMetadata = async ({
+export const uploadArtifactMetadata = async ({
   artifacts,
   authSecret,
   workerDomain,
@@ -42,4 +43,33 @@ export const uploadMetadata = async ({
   }
 
   core.endGroup();
+};
+
+export const uploadGlobalMetadata = async ({
+  metadata,
+  authSecret,
+  workerDomain,
+}: {
+  metadata: Metadata;
+  authSecret: string;
+  workerDomain: string;
+}) => {
+  core.info("Uploading global metadata");
+
+  const authCredential = `${authUser}:${authSecret}`;
+
+  const resp = await fetch(`https://${workerDomain}/metadata`, {
+    method: "PUT",
+    body: JSON.stringify(metadata),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${Buffer.from(authCredential).toString("base64")}`,
+    },
+  });
+
+  if (!resp.ok) {
+    throw new Error(
+      `Failed uploading global metadata\nReturned ${resp.status} ${resp.statusText}`
+    );
+  }
 };

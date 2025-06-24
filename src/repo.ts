@@ -1,7 +1,7 @@
 import path from "path";
 import { spawn } from "child_process";
 import fsPromises from "fs/promises";
-import { JsonObject } from "./submission";
+import { JsonObject, Metadata } from "./submission";
 
 import * as core from "@actions/core";
 
@@ -101,6 +101,25 @@ export const getSubmissions = async ({
   return submissions;
 };
 
+export const getMetadata = async ({
+  repoPath,
+  metadataPath,
+}: {
+  repoPath: string;
+  metadataPath: string;
+}): Promise<Metadata> => {
+  const metadataFile = getMetadataPath({
+    repoPath,
+    metadataFile: metadataPath,
+  });
+
+  const metadataContent = await fsPromises.readFile(metadataFile, {
+    encoding: "utf-8",
+  });
+
+  return JSON.parse(metadataContent);
+};
+
 export const getSubmissionPath = ({
   repoPath,
   submissionPath,
@@ -110,3 +129,11 @@ export const getSubmissionPath = ({
   submissionPath: string;
   artifactSlug: string;
 }): string => path.join(repoPath, submissionPath, `${artifactSlug}.json`);
+
+export const getMetadataPath = ({
+  repoPath,
+  metadataFile,
+}: {
+  repoPath: string;
+  metadataFile: string;
+}): string => path.join(repoPath, metadataFile);

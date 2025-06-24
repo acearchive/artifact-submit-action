@@ -25,6 +25,8 @@ export const isJsonObject = (value: JsonValue): value is JsonObject =>
 export const isString = (value: JsonValue): value is string =>
   typeof value === "string";
 
+export type Metadata = JsonObject;
+
 export type IncompleteFileSubmission = Readonly<{
   name: string;
   filename: string;

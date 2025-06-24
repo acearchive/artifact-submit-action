@@ -4,7 +4,7 @@ import path from "path";
 import fsPromises from "fs/promises";
 
 import { getParams, Params } from "./params";
-import { getSubmissions } from "./repo";
+import { getMetadata, getSubmissions } from "./repo";
 import { schema } from "./schema";
 import { downloadAndVerify } from "./download";
 import { debugPrintDigest, decodeMultihash } from "./hash";
@@ -12,6 +12,7 @@ import { checkArtifactExists, newClient, putArtifactFile } from "./s3";
 import {
   IncompleteArtifactSubmission,
   isSubmissionValidated,
+  Metadata,
   toApi,
 } from "./submission";
 import { Artifact } from "./api";
@@ -20,7 +21,7 @@ import {
   completeArtifactSubmissions,
   writeArtifactSubmissions,
 } from "./validate";
-import { uploadMetadata } from "./db";
+import { uploadArtifactMetadata, uploadGlobalMetadata } from "./db";
 
 const validate = async ({
   params,
@@ -36,9 +37,11 @@ const validate = async ({
 const upload = async ({
   params,
   submissions,
+  metadata,
 }: {
   params: Params;
   submissions: ReadonlyArray<IncompleteArtifactSubmission>;
+  metadata: Metadata;
 }): Promise<void> => {
   core.info("Starting the upload process");
 
@@ -142,8 +145,15 @@ const upload = async ({
   core.info(`Uploaded ${filesUploaded} files to R2`);
 
   // Upload metadata to the database.
-  await uploadMetadata({
+  await uploadArtifactMetadata({
     artifacts: artifactMetadataList,
+    authSecret: params.submissionWorkerSecret,
+    workerDomain: params.submissionWorkerDomain,
+  });
+
+  // Upload global metadata (tag descriptions, etc.).
+  await uploadGlobalMetadata({
+    metadata: metadata,
     authSecret: params.submissionWorkerSecret,
     workerDomain: params.submissionWorkerDomain,
   });
@@ -153,10 +163,16 @@ const upload = async ({
 
 const main = async (): Promise<void> => {
   const params = getParams();
+
   const rawSubmissions = await getSubmissions({
     repoPath: params.repo,
     submissionPath: params.path,
     baseRef: params.baseRef,
+  });
+
+  const metadata = await getMetadata({
+    repoPath: params.repo,
+    metadataPath: params.metadataPath,
   });
 
   const setOfAllSlugs = allSlugsInSubmissions(rawSubmissions);
@@ -183,7 +199,7 @@ const main = async (): Promise<void> => {
     case "validate":
       return await validate({ params, submissions });
     case "upload":
-      return await upload({ params, submissions });
+      return await upload({ params, submissions, metadata });
   }
 };
 
